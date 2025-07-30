@@ -5,16 +5,19 @@
     <title>Redirecting...</title>
     <script>
       const admins = [
-        "https://t.me/sofiyagfs?text=+done+register", // ganti dengan username admin
-        "https://t.me/pemburuduithp?text=+done+register",
-        "https://t.me/admin3"
+        "https://t.me/sofiyagfs?text=+done+register", // Isnin
+        "https://t.me/pemburuduithp?text=+done+register", // Selasa
+        "https://t.me/Admin3", // Rabu
+        "https://t.me/sofiyagfs?text=+done+register", // Khamis
+        "https://t.me/pemburuduithp?text=+done+register", // Jumaat
+        "https://t.me/Admin3", // Sabtu
+        "https://t.me/sofiyagfs?text=+done+register"  // Ahad
       ];
-      const minute = new Date().getMinutes();
-      const index = minute % admins.length;
-      window.location.href = admins[index];
+      const today = new Date().getDay(); // Ahad = 0, Isnin = 1, ..., Sabtu = 6
+      window.location.href = admins[today];
     </script>
   </head>
   <body>
-    <p>Redirecting...</p>
+    <p>Redirecting based on day of week...</p>
   </body>
 </html>
