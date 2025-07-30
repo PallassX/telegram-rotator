@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirecting...</title>
+    <script>
+      const admins = [
+        "https://t.me/sofiyagfs?text=+done+register", // ganti dengan username admin
+        "https://t.me/pemburuduithp?text=+done+register",
+        "https://t.me/admin3"
+      ];
+      const minute = new Date().getMinutes();
+      const index = minute % admins.length;
+      window.location.href = admins[index];
+    </script>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+  </body>
+</html>
