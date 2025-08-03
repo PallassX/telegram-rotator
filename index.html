@@ -2,90 +2,102 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Redirect Admin Panel</title>
+  <title>Jadual Admin Harian</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
-    }
-    h2 {
-      text-align: center;
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-    }
-    select, button {
-      padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-    }
-    .status {
-      margin-top: 20px;
-      font-weight: bold;
-      color: green;
-    }
+    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
+    input, select, button { margin: 5px 0; padding: 8px; width: 100%; }
+    table { width: 100%; margin-top: 15px; border-collapse: collapse; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
   </style>
 </head>
 <body>
-  <h2>🔁 Admin Redirect Panel</h2>
+  <h2>🕒 Panel Jadual Harian</h2>
 
-  <label>Redirect Mode:</label>
-  <select id="mode">
-    <option value="minute">By Minute</option>
-    <option value="hour">By Hour</option>
-    <option value="daily">By Day</option>
+  <label>Hari:</label>
+  <select id="day">
+    <option value="0">Ahad</option>
+    <option value="1">Isnin</option>
+    <option value="2">Selasa</option>
+    <option value="3">Rabu</option>
+    <option value="4">Khamis</option>
+    <option value="5">Jumaat</option>
+    <option value="6">Sabtu</option>
   </select>
 
-  <label>Admin Links (one per line):</label>
-  <textarea id="adminLinks"></textarea>
+  <label>Masa Mula:</label>
+  <input type="time" id="startTime" />
 
-  <button onclick="saveSettings()">💾 Save Settings</button>
-  <button onclick="redirect()">➡️ Redirect Now</button>
+  <label>Masa Tamat:</label>
+  <input type="time" id="endTime" />
 
-  <p class="status" id="targetInfo">Waiting for action...</p>
+  <label>Link Redirect (cth: https://t.me/teamA)</label>
+  <input type="text" id="link" placeholder="Paste link" />
+
+  <button onclick="addSchedule()">➕ Tambah Jadual</button>
+  <button onclick="checkRedirect()">🚀 Check & Redirect</button>
+
+  <table id="scheduleTable">
+    <thead>
+      <tr><th>Hari</th><th>Mula</th><th>Tamat</th><th>Link</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <p id="status"></p>
 
   <script>
-    function saveSettings() {
-      const mode = document.getElementById("mode").value;
-      const links = document.getElementById("adminLinks").value.trim().split('\n').filter(x => x !== '');
-      localStorage.setItem("redirect_mode", mode);
-      localStorage.setItem("admin_links", JSON.stringify(links));
-      document.getElementById("targetInfo").innerText = "✅ Settings saved!";
+    const schedule = JSON.parse(localStorage.getItem("schedule") || "[]");
+
+    function addSchedule() {
+      const day = parseInt(document.getElementById("day").value);
+      const start = document.getElementById("startTime").value;
+      const end = document.getElementById("endTime").value;
+      const link = document.getElementById("link").value.trim();
+
+      if (!start || !end || !link) {
+        alert("Isi semua ruangan");
+        return;
+      }
+
+      schedule.push({ day, start, end, link });
+      localStorage.setItem("schedule", JSON.stringify(schedule));
+      renderTable();
     }
 
-    function loadSettings() {
-      const mode = localStorage.getItem("redirect_mode") || "minute";
-      const links = JSON.parse(localStorage.getItem("admin_links") || '["https://t.me/sofiyagfs?text=+done+register","https://t.me/pemburuduithp?text=+done+register","https://t.me/admin3"]');
-      document.getElementById("mode").value = mode;
-      document.getElementById("adminLinks").value = links.join('\n');
-      return { mode, links };
+    function renderTable() {
+      const tbody = document.querySelector("#scheduleTable tbody");
+      tbody.innerHTML = "";
+      const days = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"];
+
+      schedule.forEach(s => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${days[s.day]}</td><td>${s.start}</td><td>${s.end}</td><td>${s.link}</td>`;
+        tbody.appendChild(row);
+      });
     }
 
-    function getIndex(mode, length) {
+    function checkRedirect() {
       const now = new Date();
-      if (mode === "minute") return now.getMinutes() % length;
-      if (mode === "hour") return now.getHours() % length;
-      if (mode === "daily") return now.getDate() % length;
-      return 0;
+      const currentDay = now.getDay();
+      const currentTime = now.toTimeString().slice(0,5); // "HH:MM"
+
+      const match = schedule.find(s =>
+        s.day === currentDay &&
+        currentTime >= s.start &&
+        currentTime <= s.end
+      );
+
+      if (match) {
+        document.getElementById("status").innerText = `Redirecting to: ${match.link}`;
+        setTimeout(() => window.location.href = match.link, 2000);
+      } else {
+        document.getElementById("status").innerText = "⏳ Tiada jadual aktif sekarang.";
+      }
     }
 
-    function redirect() {
-      const mode = document.getElementById("mode").value;
-      const links = document.getElementById("adminLinks").value.trim().split('\n').filter(x => x !== '');
-      const index = getIndex(mode, links.length);
-      const target = links[index];
-      document.getElementById("targetInfo").innerText = `Redirecting to: ${target}`;
-      setTimeout(() => {
-        window.location.href = target;
-      }, 2000);
-    }
-
-    // Load settings on page load
+    // Load on page load
     window.onload = () => {
-      loadSettings();
+      renderTable();
     };
   </script>
 </body>
