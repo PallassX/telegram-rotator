@@ -1,23 +1,63 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Redirecting...</title>
-    <script>
-      const admins = [
-        "https://t.me/sofiyagfs?text=+done+register", // Isnin
-        "https://t.me/pemburuduithp?text=+done+register", // Selasa
-        "https://t.me/Admin3", // Rabu
-        "https://t.me/sofiyagfs?text=+done+register", // Khamis
-        "https://t.me/pemburuduithp?text=+done+register", // Jumaat
-        "https://t.me/Admin3", // Sabtu
-        "https://t.me/sofiyagfs?text=+done+register"  // Ahad
-      ];
-      const today = new Date().getDay(); // Ahad = 0, Isnin = 1, ..., Sabtu = 6
-      window.location.href = admins[today];
-    </script>
-  </head>
-  <body>
-    <p>Redirecting based on day of week...</p>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Redirect Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    select, button {
+      padding: 8px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Redirecting to Admin</h2>
+  <p>Select redirect logic:</p>
+
+  <select id="mode">
+    <option value="minute">By Minute</option>
+    <option value="hour">By Hour</option>
+    <option value="daily">Daily</option>
+  </select>
+
+  <button onclick="redirect()">Redirect Now</button>
+
+  <p id="targetLink">Waiting for redirect...</p>
+
+  <script>
+    const admins = [
+      "https://t.me/sofiyagfs?text=+done+register",
+      "https://t.me/pemburuduithp?text=+done+register",
+      "https://t.me/admin3"
+    ];
+
+    function getIndex(mode) {
+      const now = new Date();
+      if (mode === "minute") return now.getMinutes() % admins.length;
+      if (mode === "hour") return now.getHours() % admins.length;
+      if (mode === "daily") return now.getDate() % admins.length;
+      return 0;
+    }
+
+    function redirect() {
+      const mode = document.getElementById("mode").value;
+      const index = getIndex(mode);
+      const url = admins[index];
+      document.getElementById("targetLink").innerText = `Redirecting to: ${url}`;
+      setTimeout(() => {
+        window.location.href = url;
+      }, 2000);
+    }
+
+    // Auto redirect on page load
+    window.onload = () => {
+      redirect();
+    };
+  </script>
+</body>
 </html>
