@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Redirecting...</title>
+  <script>
+    window.onload = function () {
+      const now = new Date();
+      const current = now.toTimeString().slice(0, 5); // HH:MM
+      const slots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
+
+      const match = slots.find(slot =>
+        current >= slot.start && current <= slot.end
+      );
+
+      if (match) {
+        window.location.href = match.link;
+      } else {
+        document.body.innerHTML = "<h2>❌ Tiada admin aktif sekarang.</h2>";
+      }
+    }
+  </script>
+</head>
+<body>
+  <p>⏳ Redirecting based on time slot...</p>
+</body>
+</html>
