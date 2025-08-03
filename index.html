@@ -2,19 +2,26 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Jadual Admin Harian</title>
+  <title>Admin Time Scheduler</title>
   <style>
-    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
-    input, select, button { margin: 5px 0; padding: 8px; width: 100%; }
-    table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+    body { font-family: Arial; padding: 20px; max-width: 800px; margin: auto; }
+    input, select, button { margin: 6px 0; padding: 8px; width: 100%; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    .status { margin-top: 15px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>🕒 Panel Jadual Harian</h2>
+  <h2>🧭 Admin Schedule Panel</h2>
+
+  <label>Admin Name:</label>
+  <input type="text" id="adminName" placeholder="e.g. Team A" />
+
+  <label>Telegram Link:</label>
+  <input type="text" id="adminLink" placeholder="e.g. https://t.me/teamA" />
 
   <label>Hari:</label>
-  <select id="day">
+  <select id="adminDay">
     <option value="0">Ahad</option>
     <option value="1">Isnin</option>
     <option value="2">Selasa</option>
@@ -25,77 +32,96 @@
   </select>
 
   <label>Masa Mula:</label>
-  <input type="time" id="startTime" />
+  <input type="time" id="adminStartTime" />
 
   <label>Masa Tamat:</label>
-  <input type="time" id="endTime" />
+  <input type="time" id="adminEndTime" />
 
-  <label>Link Redirect (cth: https://t.me/teamA)</label>
-  <input type="text" id="link" placeholder="Paste link" />
+  <button onclick="addAdminSchedule()">➕ Tambah Jadual</button>
+  <button onclick="checkAndRedirect()">🚀 Check & Redirect</button>
 
-  <button onclick="addSchedule()">➕ Tambah Jadual</button>
-  <button onclick="checkRedirect()">🚀 Check & Redirect</button>
-
-  <table id="scheduleTable">
+  <table>
     <thead>
-      <tr><th>Hari</th><th>Mula</th><th>Tamat</th><th>Link</th></tr>
+      <tr>
+        <th>Nama</th>
+        <th>Hari</th>
+        <th>Masa</th>
+        <th>Link</th>
+        <th>❌</th>
+      </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="scheduleTable"></tbody>
   </table>
 
-  <p id="status"></p>
+  <p class="status" id="redirectStatus"></p>
 
   <script>
-    const schedule = JSON.parse(localStorage.getItem("schedule") || "[]");
+    const days = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"];
+    let adminSchedule = JSON.parse(localStorage.getItem("admin_schedule") || "[]");
 
-    function addSchedule() {
-      const day = parseInt(document.getElementById("day").value);
-      const start = document.getElementById("startTime").value;
-      const end = document.getElementById("endTime").value;
-      const link = document.getElementById("link").value.trim();
+    function saveSchedule() {
+      localStorage.setItem("admin_schedule", JSON.stringify(adminSchedule));
+    }
 
-      if (!start || !end || !link) {
-        alert("Isi semua ruangan");
+    function addAdminSchedule() {
+      const name = document.getElementById("adminName").value.trim();
+      const link = document.getElementById("adminLink").value.trim();
+      const day = parseInt(document.getElementById("adminDay").value);
+      const start = document.getElementById("adminStartTime").value;
+      const end = document.getElementById("adminEndTime").value;
+
+      if (!name || !link || !start || !end) {
+        alert("Sila isi semua maklumat.");
         return;
       }
 
-      schedule.push({ day, start, end, link });
-      localStorage.setItem("schedule", JSON.stringify(schedule));
+      adminSchedule.push({ name, link, day, start, end });
+      saveSchedule();
       renderTable();
     }
 
     function renderTable() {
-      const tbody = document.querySelector("#scheduleTable tbody");
-      tbody.innerHTML = "";
-      const days = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"];
-
-      schedule.forEach(s => {
+      const table = document.getElementById("scheduleTable");
+      table.innerHTML = "";
+      adminSchedule.forEach((s, i) => {
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${days[s.day]}</td><td>${s.start}</td><td>${s.end}</td><td>${s.link}</td>`;
-        tbody.appendChild(row);
+        row.innerHTML = `
+          <td>${s.name}</td>
+          <td>${days[s.day]}</td>
+          <td>${s.start} – ${s.end}</td>
+          <td><a href="${s.link}" target="_blank">${s.link}</a></td>
+          <td><button onclick="removeSchedule(${i})">🗑️</button></td>
+        `;
+        table.appendChild(row);
       });
     }
 
-    function checkRedirect() {
+    function removeSchedule(index) {
+      adminSchedule.splice(index, 1);
+      saveSchedule();
+      renderTable();
+    }
+
+    function checkAndRedirect() {
       const now = new Date();
-      const currentDay = now.getDay();
+      const today = now.getDay(); // 0 = Sunday
       const currentTime = now.toTimeString().slice(0,5); // "HH:MM"
 
-      const match = schedule.find(s =>
-        s.day === currentDay &&
-        currentTime >= s.start &&
-        currentTime <= s.end
+      const match = adminSchedule.find(entry =>
+        entry.day === today &&
+        currentTime >= entry.start &&
+        currentTime <= entry.end
       );
 
       if (match) {
-        document.getElementById("status").innerText = `Redirecting to: ${match.link}`;
+        document.getElementById("redirectStatus").innerText = `✅ Redirecting to ${match.name} – ${match.link}`;
         setTimeout(() => window.location.href = match.link, 2000);
       } else {
-        document.getElementById("status").innerText = "⏳ Tiada jadual aktif sekarang.";
+        document.getElementById("redirectStatus").innerText = "❌ Tiada admin aktif sekarang.";
       }
     }
 
-    // Load on page load
+    // Load on start
     window.onload = () => {
       renderTable();
     };
