@@ -97,8 +97,8 @@
     function addSlot() {
       const name = document.getElementById("slotName").value.trim();
       const link = document.getElementById("slotLink").value.trim();
-      const start = document.getElementById("slotStart").value;
-      const end = document.getElementById("slotEnd").value;
+      const start = document.getElementById("slotStart").value.slice(0, 5);
+      const end = document.getElementById("slotEnd").value.slice(0, 5);
 
       if (!name || !link || !start || !end) {
         alert("Sila isi semua maklumat slot.");
