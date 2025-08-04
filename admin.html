@@ -1,4 +1,4 @@
-a<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ms">
 <head>
   <meta charset="UTF-8" />
@@ -46,14 +46,6 @@ a<!DOCTYPE html>
 
   <h3>⚙️ Panel Admin</h3>
 
-  <!-- Dropdown Pilih Admin -->
-  <label for="adminSelect">Link Redirect (Pilih Admin):</label>
-  <select id="adminSelect"></select>
-  <button onclick="manualRedirect()">🔗 Manual Redirect</button>
-
-  <br><br>
-
-  <!-- Form Tambah Slot -->
   <label>Nama Slot:</label>
   <input type="text" id="slotName" placeholder="Contoh: Admin Pagi" />
 
@@ -68,7 +60,6 @@ a<!DOCTYPE html>
 
   <button onclick="addSlot()">➕ Tambah Slot</button>
 
-  <!-- Jadual Slot -->
   <table>
     <thead>
       <tr><th>Nama</th><th>Mula</th><th>Tamat</th><th>Link</th><th>❌</th></tr>
@@ -96,19 +87,6 @@ a<!DOCTYPE html>
           <td><button onclick="removeSlot(${index})">❌</button></td>
         `;
         tbody.appendChild(row);
-      });
-      renderAdminSelect();
-    }
-
-    function renderAdminSelect() {
-      const select = document.getElementById("adminSelect");
-      select.innerHTML = "";
-      timeSlots.forEach((slot) => {
-        const option = document.createElement("option");
-        const username = slot.link.replace("https://", "").split("/")[1] || "admin";
-        option.value = slot.link;
-        option.text = `${slot.name} - ${username}`;
-        select.appendChild(option);
       });
     }
 
@@ -151,12 +129,6 @@ a<!DOCTYPE html>
       } else {
         statusEl.innerText = `❌ Tiada admin aktif sekarang (${current})`;
       }
-    }
-
-    function manualRedirect() {
-      const select = document.getElementById("adminSelect");
-      const link = select.value;
-      if (link) window.location.href = link;
     }
 
     window.onload = () => {
