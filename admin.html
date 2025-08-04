@@ -186,11 +186,15 @@
         return false;
       });
 
+      const isAdminPage = window.location.pathname.includes("admin.html");
+
       if (match) {
         statusEl.innerText = `✅ Sekarang (${current}, ${today}) — Redirect ke ${match.name}`;
-        setTimeout(() => {
-          window.location.href = match.link;
-        }, 2000);
+        if (!isAdminPage) {
+          setTimeout(() => {
+            window.location.href = match.link;
+          }, 2000);
+        }
       } else {
         statusEl.innerText = `❌ Tiada admin aktif sekarang (${current}, ${today})`;
       }
