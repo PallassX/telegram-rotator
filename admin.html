@@ -169,9 +169,10 @@
 
     function autoRedirect() {
       const now = new Date();
-      const current = now.toTimeString().slice(0, 5); // HH:MM
-      const today = now.toISOString().split("T")[0]; // yyyy-mm-dd
-      const currentDay = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"][now.getDay()];
+      const malaysiaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+      const current = malaysiaTime.toTimeString().slice(0, 5); // HH:MM
+      const today = malaysiaTime.toISOString().split("T")[0]; // yyyy-mm-dd
+      const currentDay = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"][malaysiaTime.getDay()];
       const statusEl = document.getElementById("status");
 
       const match = timeSlots.find(slot => {
