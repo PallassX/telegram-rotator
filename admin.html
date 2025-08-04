@@ -41,10 +41,29 @@
 </head>
 <body>
 
-  <h2>🔁 Redirect Based on Time</h2>
+  <h2>🔁 Redirect Berdasarkan Masa</h2>
   <p id="status" class="status">⏳ Menyemak masa sekarang...</p>
 
   <h3>⚙️ Panel Admin</h3>
+
+  <label>Mod Redirect:</label>
+  <select id="slotMode" onchange="toggleDaySelector()">
+    <option value="daily">Daily (Setiap Hari)</option>
+    <option value="byDay">Ikut Hari</option>
+  </select>
+
+  <div id="daySelector" style="display: none;">
+    <label>Pilih Hari:</label>
+    <select id="slotDay">
+      <option value="Isnin">Isnin</option>
+      <option value="Selasa">Selasa</option>
+      <option value="Rabu">Rabu</option>
+      <option value="Khamis">Khamis</option>
+      <option value="Jumaat">Jumaat</option>
+      <option value="Sabtu">Sabtu</option>
+      <option value="Ahad">Ahad</option>
+    </select>
+  </div>
 
   <label>Nama Slot:</label>
   <input type="text" id="slotName" placeholder="Contoh: Admin Pagi" />
@@ -74,13 +93,19 @@
       localStorage.setItem("timeSlots", JSON.stringify(timeSlots));
     }
 
+    function toggleDaySelector() {
+      const mode = document.getElementById("slotMode").value;
+      document.getElementById("daySelector").style.display = mode === "byDay" ? "block" : "none";
+    }
+
     function renderTable() {
       const tbody = document.getElementById("slotTable");
       tbody.innerHTML = "";
       timeSlots.forEach((slot, index) => {
+        const extra = slot.mode === "byDay" ? ` (${slot.day})` : "";
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${slot.name}</td>
+          <td>${slot.name}${extra}</td>
           <td>${slot.start}</td>
           <td>${slot.end}</td>
           <td><a href="${slot.link}" target="_blank">${slot.link}</a></td>
@@ -95,13 +120,15 @@
       const link = document.getElementById("slotLink").value.trim();
       const start = document.getElementById("slotStart").value.slice(0, 5);
       const end = document.getElementById("slotEnd").value.slice(0, 5);
+      const mode = document.getElementById("slotMode").value;
+      const day = mode === "byDay" ? document.getElementById("slotDay").value : null;
 
-      if (!name || !link || !start || !end) {
+      if (!name || !link || !start || !end || (mode === "byDay" && !day)) {
         alert("Sila isi semua maklumat slot.");
         return;
       }
 
-      timeSlots.push({ name, link, start, end });
+      timeSlots.push({ name, link, start, end, mode, day });
       saveSlots();
       renderTable();
     }
@@ -115,19 +142,25 @@
     function autoRedirect() {
       const now = new Date();
       const current = now.toTimeString().slice(0, 5); // HH:MM
+      const currentDay = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"][now.getDay()];
       const statusEl = document.getElementById("status");
 
-      const match = timeSlots.find(slot =>
-        current >= slot.start && current <= slot.end
-      );
+      const match = timeSlots.find(slot => {
+        if (slot.mode === "daily") {
+          return current >= slot.start && current <= slot.end;
+        } else if (slot.mode === "byDay") {
+          return slot.day === currentDay && current >= slot.start && current <= slot.end;
+        }
+        return false;
+      });
 
       if (match) {
-        statusEl.innerText = `✅ Sekarang (${current}) — Redirect ke ${match.name}`;
+        statusEl.innerText = `✅ Sekarang (${current}, ${currentDay}) — Redirect ke ${match.name}`;
         setTimeout(() => {
           window.location.href = match.link;
         }, 2000);
       } else {
-        statusEl.innerText = `❌ Tiada admin aktif sekarang (${current})`;
+        statusEl.innerText = `❌ Tiada admin aktif sekarang (${current}, ${currentDay})`;
       }
     }
 
