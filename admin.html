@@ -41,18 +41,18 @@
 </head>
 <body>
 
-  <h2>🔁 Redirect Berdasarkan Masa</h2>
+  <h2>🔁 Redirect Berdasarkan Masa atau Hari</h2>
   <p id="status" class="status">⏳ Menyemak masa sekarang...</p>
 
   <h3>⚙️ Panel Admin</h3>
 
-  <label>Mod Redirect:</label>
-  <select id="slotMode" onchange="toggleDaySelector()">
-    <option value="daily">Daily (Setiap Hari)</option>
-    <option value="byDay">Ikut Hari</option>
+  <label>Pilih Jenis Redirect:</label>
+  <select id="slotType" onchange="toggleDayInput()">
+    <option value="byTime">Ikut Jam Harian (Setiap Hari)</option>
+    <option value="byDay">Ikut Hari Sahaja</option>
   </select>
 
-  <div id="daySelector" style="display: none;">
+  <div id="dayInput" style="display: none;">
     <label>Pilih Hari:</label>
     <select id="slotDay">
       <option value="Isnin">Isnin</option>
@@ -81,7 +81,7 @@
 
   <table>
     <thead>
-      <tr><th>Nama</th><th>Mula</th><th>Tamat</th><th>Link</th><th>❌</th></tr>
+      <tr><th>Nama</th><th>Jenis</th><th>Hari</th><th>Mula</th><th>Tamat</th><th>Link</th><th>❌</th></tr>
     </thead>
     <tbody id="slotTable"></tbody>
   </table>
@@ -93,19 +93,20 @@
       localStorage.setItem("timeSlots", JSON.stringify(timeSlots));
     }
 
-    function toggleDaySelector() {
-      const mode = document.getElementById("slotMode").value;
-      document.getElementById("daySelector").style.display = mode === "byDay" ? "block" : "none";
+    function toggleDayInput() {
+      const type = document.getElementById("slotType").value;
+      document.getElementById("dayInput").style.display = type === "byDay" ? "block" : "none";
     }
 
     function renderTable() {
       const tbody = document.getElementById("slotTable");
       tbody.innerHTML = "";
       timeSlots.forEach((slot, index) => {
-        const extra = slot.mode === "byDay" ? ` (${slot.day})` : "";
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${slot.name}${extra}</td>
+          <td>${slot.name}</td>
+          <td>${slot.type === "byDay" ? "Hari Sahaja" : "Jam Harian"}</td>
+          <td>${slot.type === "byDay" ? slot.day : "-"}</td>
           <td>${slot.start}</td>
           <td>${slot.end}</td>
           <td><a href="${slot.link}" target="_blank">${slot.link}</a></td>
@@ -120,15 +121,15 @@
       const link = document.getElementById("slotLink").value.trim();
       const start = document.getElementById("slotStart").value.slice(0, 5);
       const end = document.getElementById("slotEnd").value.slice(0, 5);
-      const mode = document.getElementById("slotMode").value;
-      const day = mode === "byDay" ? document.getElementById("slotDay").value : null;
+      const type = document.getElementById("slotType").value;
+      const day = type === "byDay" ? document.getElementById("slotDay").value : null;
 
-      if (!name || !link || !start || !end || (mode === "byDay" && !day)) {
-        alert("Sila isi semua maklumat slot.");
+      if (!name || !link || !start || !end || (type === "byDay" && !day)) {
+        alert("Sila isi semua maklumat.");
         return;
       }
 
-      timeSlots.push({ name, link, start, end, mode, day });
+      timeSlots.push({ name, link, start, end, type, day });
       saveSlots();
       renderTable();
     }
@@ -146,9 +147,9 @@
       const statusEl = document.getElementById("status");
 
       const match = timeSlots.find(slot => {
-        if (slot.mode === "daily") {
+        if (slot.type === "byTime") {
           return current >= slot.start && current <= slot.end;
-        } else if (slot.mode === "byDay") {
+        } else if (slot.type === "byDay") {
           return slot.day === currentDay && current >= slot.start && current <= slot.end;
         }
         return false;
