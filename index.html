@@ -17,49 +17,51 @@
   <h2>🔁 Sedang Semak Redirect...</h2>
   <div class="badge">Mode: <strong id="modeLabel">-</strong></div>
   <p class="status" id="status">⏳ Memeriksa tetapan...</p>
-  <p class="muted">Halaman ini auto‑redirect. Tiada tindakan diperlukan.</p>
+  <p class="muted">Halaman ini auto-redirect. Tiada tindakan diperlukan.</p>
 
   <script>
-    // ====== Ambil data dari localStorage (diset melalui admin panel) ======
-    const mode = localStorage.getItem("mode") || "schedule";              // 'schedule' | 'rotate'
-    const timeSlots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
-    const rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
-    let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
-
-    // UI kecil
     const modeLabel = document.getElementById("modeLabel");
     const statusEl  = document.getElementById("status");
-    modeLabel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
 
-    function saveRotationIndex(){ localStorage.setItem("rotationIndex", String(rotationIndex)); }
+    async function loadSettings() {
+      try {
+        const res = await fetch('settings.json?_=' + Date.now());
+        if (!res.ok) throw new Error("Gagal memuatkan settings.json");
+        return await res.json();
+      } catch (err) {
+        statusEl.classList.add("error");
+        statusEl.textContent = "❌ Tidak dapat memuatkan tetapan.";
+        console.error(err);
+        return null;
+      }
+    }
 
-    // ====== AUTO-ROTATE (Mode: Rotate) ======
-    function autoRotateIfNeeded() {
-      if (mode !== "rotate") return false;                       // bukan rotate
-      if (!Array.isArray(rotationAdmins) || rotationAdmins.length === 0) return false;
+    function autoRotate(settings) {
+      const list = settings.rotationAdmins || [];
+      if (list.length === 0) {
+        statusEl.classList.add("error");
+        statusEl.textContent = "❌ No admin set right now.";
+        return false;
+      }
+      let idx = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
+      idx = (idx + 1) % list.length;
+      localStorage.setItem("rotationIndex", String(idx));
 
-      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
-      saveRotationIndex();
-
-      const adm = rotationAdmins[rotationIndex];
-      if (!adm || !adm.link) return false;
-
+      const adm = list[idx];
       statusEl.classList.remove("error");
-      statusEl.textContent = `🔁 Rotate ke: ${adm.name || "Admin"} (index ${rotationIndex}) — redirect sekarang...`;
+      statusEl.textContent = `🔁 Rotate ke: ${adm.name || "Admin"} (index ${idx}) — redirect sekarang...`;
       setTimeout(() => { window.location.href = adm.link; }, 400);
       return true;
     }
 
-    // ====== AUTO-SCHEDULE (Mode: Schedule) ======
-    function autoRedirectBySchedule() {
+    function autoSchedule(settings) {
       const now = new Date();
       const malaysiaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
-      const current = malaysiaTime.toTimeString().slice(0, 5); // HH:MM
-      const today = malaysiaTime.toISOString().split("T")[0];  // yyyy-mm-dd
+      const current = malaysiaTime.toTimeString().slice(0, 5);
+      const today = malaysiaTime.toISOString().split("T")[0];
       const currentDay = ["Ahad","Isnin","Selasa","Rabu","Khamis","Jumaat","Sabtu"][malaysiaTime.getDay()];
 
-      const match = timeSlots.find(slot => {
-        if (!slot) return false;
+      const match = (settings.timeSlots || []).find(slot => {
         if (slot.type === "byTime")  return current >= slot.start && current <= slot.end;
         if (slot.type === "byDay")   return slot.day === currentDay && current >= slot.start && current <= slot.end;
         if (slot.type === "byDate")  return slot.date === today && current >= slot.start && current <= slot.end;
@@ -76,18 +78,17 @@
       }
     }
 
-    // ====== BOOT ======
-    (function boot(){
-      // Jangan auto-redirect di admin page
-      const isAdminPage = window.location.pathname.includes("admin.html");
-      if (isAdminPage) {
-        statusEl.textContent = "👨‍💻 Ini halaman admin — tiada auto-redirect.";
-        return;
-      }
+    (async function boot(){
+      const settings = await loadSettings();
+      if (!settings) return;
 
-      // Public page behaviour
-      const rotated = autoRotateIfNeeded();   // cuba rotate jika mode=rotate
-      if (!rotated) autoRedirectBySchedule(); // kalau tak, cuba ikut slot masa
+      modeLabel.textContent = (settings.mode || 'schedule').replace(/^\w/, c => c.toUpperCase());
+
+      if (settings.mode === "rotate") {
+        autoRotate(settings);
+      } else {
+        autoSchedule(settings);
+      }
     })();
   </script>
 </body>
