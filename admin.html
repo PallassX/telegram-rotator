@@ -2,143 +2,93 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Panel — Rotate ON/OFF</title>
+  <title>Redirect Telegram | Auto Rotate / Slot Masa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body{font-family:Arial,sans-serif;background:#f6f7f9;padding:24px;max-width:800px;margin:auto;}
-    h2{margin:0 0 12px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-top:12px}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:14px}
-    th{background:#fafafa}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:700px){.row{grid-template-columns:1fr}}
-    button{cursor:pointer;border:0;background:#111;color:#fff;border-radius:10px;padding:10px 14px}
-    .muted{color:#666;font-size:13px}
-    .switch{position:relative;display:inline-block;width:46px;height:26px}
-    .switch input{display:none}
-    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;transition:.2s;border-radius:999px}
-    .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:white;transition:.2s;border-radius:50%}
-    input:checked + .slider{background:#0a7c2f}
-    input:checked + .slider:before{transform:translateX(20px)}
-    .status{margin-top:10px;font-size:14px}
+    body { font-family: Arial, sans-serif; background:#f4f4f4; padding:24px; max-width:720px; margin:auto; text-align:center; }
+    h2 { margin-top:56px; }
+    .status { font-size:18px; margin-top:18px; color:#0a7c2f; }
+    .error { color:#b00020; }
+    .muted { color:#666; font-size:14px; margin-top:6px; }
+    .badge { display:inline-block; margin-top:10px; padding:6px 10px; border-radius:999px; background:#fff; border:1px solid #ddd; }
   </style>
 </head>
 <body>
-  <h2>Admin Panel — Rotate ON/OFF</h2>
-  <p class="muted">Panel ini memuat <code>settings.json</code>, benarkan anda ON/OFF admin, dan muat turun fail tetapan untuk upload semula ke GitHub.</p>
-
-  <div class="card">
-    <div class="row">
-      <div>
-        <label>Mode:</label>
-        <select id="modeSel">
-          <option value="rotate">Rotate</option>
-          <option value="schedule">Schedule</option>
-        </select>
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="refreshBtn">🔄 Reload settings.json</button>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr><th>#</th><th>Nama</th><th>Link</th><th>Aktif</th></tr>
-      </thead>
-      <tbody id="adminTbody"></tbody>
-    </table>
-
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button id="downloadBtn">💾 Download settings.json</button>
-    </div>
-
-    <div id="status" class="status"></div>
-  </div>
+  <h2>🔁 Sedang Semak Redirect...</h2>
+  <div class="badge">Mode: <strong id="modeLabel">-</strong></div>
+  <p class="status" id="status">⏳ Memeriksa tetapan...</p>
+  <p class="muted">Halaman ini auto‑redirect. Tiada tindakan diperlukan.</p>
 
   <script>
-    let settings = { mode:"rotate", rotationAdmins:[], timeSlots:[] };
+    // ====== Ambil data dari localStorage (diset melalui admin panel) ======
+    const mode = localStorage.getItem("mode") || "schedule";              // 'schedule' | 'rotate'
+    const timeSlots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
+    const rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
+    let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
 
-    const modeSel     = document.getElementById('modeSel');
-    const adminTbody  = document.getElementById('adminTbody');
-    const refreshBtn  = document.getElementById('refreshBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const statusEl    = document.getElementById('status');
+    // UI kecil
+    const modeLabel = document.getElementById("modeLabel");
+    const statusEl  = document.getElementById("status");
+    modeLabel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
 
-    async function loadSettings(){
-      statusEl.textContent = "Memuat settings.json...";
-      try{
-        const res = await fetch('settings.json?_=' + Date.now());
-        if(!res.ok) throw new Error('Gagal load settings.json');
-        settings = await res.json();
-        if(!Array.isArray(settings.rotationAdmins)) settings.rotationAdmins = [];
-        if(!Array.isArray(settings.timeSlots)) settings.timeSlots = [];
-        modeSel.value = settings.mode || 'rotate';
-        renderAdmins();
-        statusEl.textContent = "Settings dimuat.";
-      }catch(e){
-        statusEl.textContent = "❌ Tidak dapat memuat settings.json";
-        console.error(e);
+    function saveRotationIndex(){ localStorage.setItem("rotationIndex", String(rotationIndex)); }
+
+    // ====== AUTO-ROTATE (Mode: Rotate) ======
+    function autoRotateIfNeeded() {
+      if (mode !== "rotate") return false;                       // bukan rotate
+      if (!Array.isArray(rotationAdmins) || rotationAdmins.length === 0) return false;
+
+      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
+      saveRotationIndex();
+
+      const adm = rotationAdmins[rotationIndex];
+      if (!adm || !adm.link) return false;
+
+      statusEl.classList.remove("error");
+      statusEl.textContent = `🔁 Rotate ke: ${adm.name || "Admin"} (index ${rotationIndex}) — redirect sekarang...`;
+      setTimeout(() => { window.location.href = adm.link; }, 400);
+      return true;
+    }
+
+    // ====== AUTO-SCHEDULE (Mode: Schedule) ======
+    function autoRedirectBySchedule() {
+      const now = new Date();
+      const malaysiaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+      const current = malaysiaTime.toTimeString().slice(0, 5); // HH:MM
+      const today = malaysiaTime.toISOString().split("T")[0];  // yyyy-mm-dd
+      const currentDay = ["Ahad","Isnin","Selasa","Rabu","Khamis","Jumaat","Sabtu"][malaysiaTime.getDay()];
+
+      const match = timeSlots.find(slot => {
+        if (!slot) return false;
+        if (slot.type === "byTime")  return current >= slot.start && current <= slot.end;
+        if (slot.type === "byDay")   return slot.day === currentDay && current >= slot.start && current <= slot.end;
+        if (slot.type === "byDate")  return slot.date === today && current >= slot.start && current <= slot.end;
+        return false;
+      });
+
+      if (match) {
+        statusEl.classList.remove("error");
+        statusEl.textContent = `✅ Redirect ke ${match.name} (${current}, ${today})`;
+        setTimeout(() => { window.location.href = match.link; }, 1000);
+      } else {
+        statusEl.classList.add("error");
+        statusEl.textContent = `❌ Tiada admin aktif sekarang (${current}, ${today})`;
       }
     }
 
-    function renderAdmins(){
-      adminTbody.innerHTML = '';
-      settings.rotationAdmins.forEach((adm, i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td><input type="text" value="${adm.name || ''}" data-idx="${i}" data-field="name" style="width:100%"></td>
-          <td><input type="text" value="${adm.link || ''}" data-idx="${i}" data-field="link" style="width:100%"></td>
-          <td>
-            <label class="switch">
-              <input type="checkbox" ${adm.active ? 'checked' : ''} data-idx="${i}" data-field="active">
-              <span class="slider"></span>
-            </label>
-          </td>
-        `;
-        adminTbody.appendChild(tr);
-      });
+    // ====== BOOT ======
+    (function boot(){
+      // Jangan auto-redirect di admin page
+      const isAdminPage = window.location.pathname.includes("admin.html");
+      if (isAdminPage) {
+        statusEl.textContent = "👨‍💻 Ini halaman admin — tiada auto-redirect.";
+        return;
+      }
 
-      // bind changes
-      adminTbody.querySelectorAll('input[type="text"]').forEach(inp=>{
-        inp.addEventListener('input', (e)=>{
-          const idx = parseInt(e.target.dataset.idx,10);
-          const field = e.target.dataset.field;
-          settings.rotationAdmins[idx][field] = e.target.value;
-        });
-      });
-      adminTbody.querySelectorAll('input[type="checkbox"]').forEach(inp=>{
-        inp.addEventListener('change', (e)=>{
-          const idx = parseInt(e.target.dataset.idx,10);
-          settings.rotationAdmins[idx].active = e.target.checked;
-        });
-      });
-    }
-
-    modeSel.addEventListener('change', ()=>{
-      settings.mode = modeSel.value;
-    });
-
-    refreshBtn.addEventListener('click', loadSettings);
-
-    downloadBtn.addEventListener('click', ()=>{
-      // siapkan blob untuk download
-      const blob = new Blob([JSON.stringify(settings, null, 2)], {type:'application/json'});
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url;
-      a.download = 'settings.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      statusEl.textContent = "✅ settings.json dimuat turun. Sila upload/replace ke GitHub Pages repo anda.";
-    });
-
-    // boot
-    loadSettings();
+      // Public page behaviour
+      const rotated = autoRotateIfNeeded();   // cuba rotate jika mode=rotate
+      if (!rotated) autoRedirectBySchedule(); // kalau tak, cuba ikut slot masa
+    })();
   </script>
 </body>
 </html>
