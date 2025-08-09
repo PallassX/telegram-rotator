@@ -28,26 +28,35 @@
         if (!res.ok) throw new Error("Gagal memuatkan settings.json");
         return await res.json();
       } catch (err) {
-        console.error(err);
-        // Fallback ke localStorage jika settings.json tak boleh dimuat
+        console.warn("Gagal load settings.json, fallback localStorage.", err);
         try {
           const rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
-          return { rotationAdmins };
+          const rotateEnabled  = JSON.parse(localStorage.getItem("rotateEnabled") || "true");
+          return { rotationAdmins, rotateEnabled };
         } catch { return null; }
       }
     }
 
-    function autoRotate(rotationAdmins) {
-      if (!Array.isArray(rotationAdmins) || rotationAdmins.length === 0) {
+    function autoRotate(rotationAdmins, rotateEnabled) {
+      // Global OFF?
+      if (rotateEnabled === false) {
         statusEl.classList.add("error");
-        statusEl.textContent = "❌ Tiada senarai admin untuk rotate.";
+        statusEl.textContent = "⛔ Rotate dimatikan oleh admin (Global OFF).";
         return;
       }
+
+      const active = (rotationAdmins || []).filter(a => a && (a.enabled !== false));
+      if (active.length === 0) {
+        statusEl.classList.add("error");
+        statusEl.textContent = "❌ Tiada admin aktif untuk rotate.";
+        return;
+      }
+
       let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
-      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
+      rotationIndex = (rotationIndex + 1) % active.length;
       localStorage.setItem("rotationIndex", rotationIndex);
 
-      const adm = rotationAdmins[rotationIndex];
+      const adm = active[rotationIndex];
       statusEl.classList.remove("error");
       statusEl.textContent = `🔁 Rotate ke: ${adm.name} (index ${rotationIndex}) — redirect sekarang...`;
       setTimeout(() => { window.location.href = adm.link; }, 400);
@@ -60,7 +69,7 @@
         statusEl.textContent = "❌ Tidak dapat memuatkan tetapan.";
         return;
       }
-      autoRotate(settings.rotationAdmins || []);
+      autoRotate(settings.rotationAdmins || [], settings.rotateEnabled !== false);
     })();
   </script>
 </body>
