@@ -7,7 +7,7 @@
   <style>
     body { font-family: Arial, sans-serif; background:#f4f4f4; padding:24px; max-width:720px; margin:auto; text-align:center; }
     h2 { margin-top:56px; }
-    .status { font-size:18px; margin-top:18px; color: #0a7c2f; }
+    .status { font-size:18px; margin-top:18px; color:#0a7c2f; }
     .error { color:#b00020; }
     .muted { color:#666; font-size:14px; margin-top:6px; }
     .badge { display:inline-block; margin-top:10px; padding:6px 10px; border-radius:999px; background:#fff; border:1px solid #ddd; }
@@ -20,8 +20,8 @@
   <p class="muted">Halaman ini auto‑redirect. Tiada tindakan diperlukan.</p>
 
   <script>
-    // ====== Ambil data dari localStorage (diset dalam admin) ======
-    const mode = localStorage.getItem("mode") || "schedule";              // 'schedule' atau 'rotate'
+    // ====== Ambil data dari localStorage (diset melalui admin panel) ======
+    const mode = localStorage.getItem("mode") || "schedule";              // 'schedule' | 'rotate'
     const timeSlots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
     const rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
     let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
@@ -31,16 +31,13 @@
     const statusEl  = document.getElementById("status");
     modeLabel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
 
-    function saveRotationIndex() {
-      localStorage.setItem("rotationIndex", String(rotationIndex));
-    }
+    function saveRotationIndex(){ localStorage.setItem("rotationIndex", String(rotationIndex)); }
 
     // ====== AUTO-ROTATE (Mode: Rotate) ======
     function autoRotateIfNeeded() {
-      if (mode !== "rotate") return false;                 // bukan rotate
+      if (mode !== "rotate") return false;                       // bukan rotate
       if (!Array.isArray(rotationAdmins) || rotationAdmins.length === 0) return false;
 
-      // gerakkan index ke admin seterusnya dan simpan
       rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
       saveRotationIndex();
 
@@ -81,9 +78,16 @@
 
     // ====== BOOT ======
     (function boot(){
-      // Cuba rotate dahulu jika mode=rotate; jika tidak, guna schedule.
-      const rotated = autoRotateIfNeeded();
-      if (!rotated) autoRedirectBySchedule();
+      // Jangan auto-redirect di admin page
+      const isAdminPage = window.location.pathname.includes("admin.html");
+      if (isAdminPage) {
+        statusEl.textContent = "👨‍💻 Ini halaman admin — tiada auto-redirect.";
+        return;
+      }
+
+      // Public page behaviour
+      const rotated = autoRotateIfNeeded();   // cuba rotate jika mode=rotate
+      if (!rotated) autoRedirectBySchedule(); // kalau tak, cuba ikut slot masa
     })();
   </script>
 </body>
