@@ -2,122 +2,394 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Panel — Edit Admin List</title>
+  <title>Redirecting + Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body{font-family:Arial,sans-serif;background:#f6f7f9;padding:24px;max-width:800px;margin:auto;}
-    h2{margin:0 0 12px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-top:12px}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:14px}
-    th{background:#fafafa}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:700px){.row{grid-template-columns:1fr}}
-    button{cursor:pointer;border:0;background:#111;color:#fff;border-radius:10px;padding:10px 14px}
-    .muted{color:#666;font-size:13px}
-    .status{margin-top:10px;font-size:14px}
+    :root { --card-bg:#fff; --muted:#666; --border:#ddd; --radius:12px; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 980px; margin: auto; background: #f4f4f4; color:#111; }
+    h2, h3 { text-align: center; margin: 8px 0 10px; }
+    p.helper { color: var(--muted); font-size: 14px; margin-top: -2px; text-align:center; }
+    .wrap { background: var(--card-bg); border:1px solid var(--border); border-radius: var(--radius);
+      padding:16px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-top: 14px; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .row-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
+    @media (max-width: 700px){ .row,.row-3 { grid-template-columns: 1fr; } }
+    label { font-weight:600; display:block; margin-top:8px; }
+    input, button, select {
+      width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box;
+      border:1px solid var(--border); border-radius:10px; background:#fff;
+    }
+    button { cursor: pointer; border:0; background:#111; color:#fff; font-weight:700; }
+    .btn-muted { background:#e9e9e9; color:#111; border:1px solid var(--border); }
+    .btn-ghost { background:#fff; color:#111; border:1px solid var(--border); }
+    .btn-inline { width:auto; padding:8px 12px; margin-left:8px; }
+    .flex { display:flex; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .status { font-size: 16px; text-align: center; margin-top: 8px; color: green; }
+    .status.error { color:#b00020; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background:#fff; border-radius:10px;
+      overflow:hidden; border:1px solid var(--border); }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: center; font-size:14px; }
+    th { background:#fafafa; }
+    .badgelite{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+      background:#f1f1f1; font-size:13px; border:1px solid var(--border); }
   </style>
 </head>
 <body>
-  <h2>Admin Panel — Edit Admin List</h2>
-  <p class="muted">Edit nama & link admin. Download fail dan upload ke GitHub Pages untuk kemaskini.</p>
+  <h2>🔁 Redirect Berdasarkan Masa / Rotate Admin</h2>
+  <p id="status" class="status">⏳ Menyemak masa sekarang...</p>
 
-  <div class="card">
+  <div class="wrap flex">
+    <span class="badgelite">Mode semasa: <strong id="modeLabel">Schedule</strong></span>
+    <button id="modeBtn" class="btn-ghost btn-inline" aria-label="Tukar Mode">Tukar ke Rotate</button>
+    <button id="nextBtn" class="btn-muted btn-inline" title="Pergi ke admin seterusnya (Rotate mode)" disabled>Next Admin ➡️</button>
+  </div>
+
+  <!-- ====================== SCHEDULE MODE PANEL ====================== -->
+  <div id="schedulePanel" class="wrap" aria-live="polite">
+    <h3>⚙️ Panel Admin — Schedule Mode</h3>
+
     <div class="row">
       <div>
-        <label>Mode:</label>
-        <select id="modeSel">
-          <option value="rotate">Rotate</option>
-          <option value="schedule">Schedule</option>
+        <label>Pilih Jenis Redirect:</label>
+        <select id="slotType" onchange="toggleInputOptions()">
+          <option value="byTime">Ikut Jam Harian (Setiap Hari)</option>
+          <option value="byDay">Ikut Hari Sahaja</option>
+          <option value="byDate">Ikut Tarikh Sahaja</option>
         </select>
       </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="refreshBtn">🔄 Reload settings.json</button>
+      <div id="dayInput" style="display:none;">
+        <label>Pilih Hari:</label>
+        <select id="slotDay">
+          <option value="Isnin">Isnin</option><option value="Selasa">Selasa</option><option value="Rabu">Rabu</option>
+          <option value="Khamis">Khamis</option><option value="Jumaat">Jumaat</option><option value="Sabtu">Sabtu</option><option value="Ahad">Ahad</option>
+        </select>
+      </div>
+      <div id="dateInput" style="display:none;">
+        <label>Pilih Tarikh:</label>
+        <input type="date" id="slotDate" />
       </div>
     </div>
 
-    <table>
-      <thead>
-        <tr><th>#</th><th>Nama</th><th>Link</th></tr>
-      </thead>
-      <tbody id="adminTbody"></tbody>
-    </table>
-
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button id="downloadBtn">💾 Download settings.json</button>
+    <div class="row-3">
+      <div>
+        <label>Nama Slot:</label>
+        <input type="text" id="slotName" placeholder="Contoh: Admin Pagi" />
+      </div>
+      <div>
+        <label>Link Redirect:</label>
+        <input type="text" id="slotLink" placeholder="Contoh: https://t.me/namatelegram" />
+      </div>
+      <div>
+        <label>Mula → Tamat (24 jam):</label>
+        <div class="flex" style="justify-content:flex-start; gap:8px;">
+          <input type="time" id="slotStart" style="width:48%"><input type="time" id="slotEnd" style="width:48%">
+        </div>
+      </div>
     </div>
 
-    <div id="status" class="status"></div>
+    <div class="flex" style="justify-content:flex-end;">
+      <button onclick="addSlot()">➕ Tambah Slot</button>
+    </div>
+
+    <table aria-label="Senarai slot schedule">
+      <thead><tr><th>Nama</th><th>Jenis</th><th>Hari/Tarikh</th><th>Mula</th><th>Tamat</th><th>Link</th><th>❌</th></tr></thead>
+      <tbody id="slotTable"></tbody>
+    </table>
+    <p class="helper">Auto-redirect hanya berlaku dalam <strong>Schedule Mode</strong> dan bukan pada <em>admin.html</em>.</p>
+  </div>
+
+  <!-- ====================== ROTATE MODE PANEL ====================== -->
+  <div id="rotatePanel" class="wrap" style="display:none;">
+    <h3>🔄 Rotation Admins — Rotate Mode</h3>
+
+    <div class="row-3">
+      <div>
+        <label>Nama Admin:</label>
+        <input type="text" id="rotName" placeholder="Contoh: Admin 1">
+      </div>
+      <div>
+        <label>Link Admin:</label>
+        <input type="text" id="rotLink" placeholder="https://t.me/namatelegram">
+      </div>
+      <div style="display:flex; align-items:end;">
+        <button onclick="addRotationAdmin()">➕ Tambah Admin</button>
+      </div>
+    </div>
+
+    <table aria-label="Senarai admin untuk rotation">
+      <thead><tr><th>#</th><th>Nama</th><th>Link</th><th>Naik</th><th>Turun</th><th>❌</th></tr></thead>
+      <tbody id="rotationTable"></tbody>
+    </table>
+
+    <div class="flex" style="justify-content:space-between; margin-top:8px;">
+      <div class="badgelite">Index semasa: <span id="rotIndexLabel">0</span></div>
+      <div class="flex">
+        <button class="btn-ghost btn-inline" onclick="prevAdmin()" id="prevBtn" disabled>⬅️ Prev</button>
+        <button class="btn-inline" onclick="nextAdmin()" id="goNextBtn" disabled>Next Admin ➡️</button>
+      </div>
+    </div>
+
+    <p class="helper">Dalam <strong>Rotate Mode</strong>, halaman public akan auto-rotate & redirect ke admin seterusnya. Di <em>admin.html</em> tiada auto-rotate.</p>
   </div>
 
   <script>
-    let settings = { mode:"rotate", rotationAdmins:[], timeSlots:[] };
+    // ========================= STATE & STORAGE =========================
+    let mode = localStorage.getItem("mode") || "schedule"; // 'schedule' | 'rotate'
+    let timeSlots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
+    let rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
+    let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
 
-    const modeSel     = document.getElementById('modeSel');
-    const adminTbody  = document.getElementById('adminTbody');
-    const refreshBtn  = document.getElementById('refreshBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const statusEl    = document.getElementById('status');
+    function saveSlots(){ localStorage.setItem("timeSlots", JSON.stringify(timeSlots)); }
+    function saveRotation(){
+      localStorage.setItem("rotationAdmins", JSON.stringify(rotationAdmins));
+      localStorage.setItem("rotationIndex", String(rotationIndex));
+    }
+    function setMode(nextMode){ mode = nextMode; localStorage.setItem("mode", mode); updateModeUI(); }
 
-    async function loadSettings(){
-      statusEl.textContent = "Memuat settings.json...";
-      try{
-        const res = await fetch('settings.json?_=' + Date.now());
-        if(!res.ok) throw new Error('Gagal load settings.json');
-        settings = await res.json();
-        if(!Array.isArray(settings.rotationAdmins)) settings.rotationAdmins = [];
-        if(!Array.isArray(settings.timeSlots)) settings.timeSlots = [];
-        modeSel.value = settings.mode || 'rotate';
-        renderAdmins();
-        statusEl.textContent = "Settings dimuat.";
-      }catch(e){
-        statusEl.textContent = "❌ Tidak dapat memuat settings.json";
-        console.error(e);
+    // ========================= MODE UI TOGGLE =========================
+    function updateModeUI(){
+      const modeLabel = document.getElementById("modeLabel");
+      const modeBtn = document.getElementById("modeBtn");
+      const schedulePanel = document.getElementById("schedulePanel");
+      const rotatePanel = document.getElementById("rotatePanel");
+      const nextBtnTop = document.getElementById("nextBtn");
+
+      if(mode === "schedule"){
+        modeLabel.textContent = "Schedule";
+        modeBtn.textContent = "Tukar ke Rotate";
+        schedulePanel.style.display = "block";
+        rotatePanel.style.display = "none";
+        nextBtnTop.disabled = true;
+      } else {
+        modeLabel.textContent = "Rotate";
+        modeBtn.textContent = "Tukar ke Schedule";
+        schedulePanel.style.display = "none";
+        rotatePanel.style.display = "block";
+        nextBtnTop.disabled = rotationAdmins.length === 0;
+      }
+      const statusEl = document.getElementById("status");
+      statusEl.classList.remove("error");
+      statusEl.textContent = (mode === "rotate")
+        ? "🔄 Rotate Mode aktif. Auto-rotate akan jalan di halaman public."
+        : "📅 Schedule Mode aktif. Auto-redirect akan digunakan jika matching slot dijumpai.";
+      updateRotateButtonsState();
+      renderRotationTable();
+    }
+
+    document.getElementById("modeBtn").addEventListener("click", () => {
+      setMode(mode === "schedule" ? "rotate" : "schedule");
+    });
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      if(mode === "rotate") nextAdmin();
+    });
+
+    // ========================= SCHEDULE MODE LOGIC =========================
+    function toggleInputOptions() {
+      const type = document.getElementById("slotType").value;
+      const dayDiv = document.getElementById("dayInput");
+      const dateDiv = document.getElementById("dateInput");
+      const startInput = document.getElementById("slotStart");
+      const endInput = document.getElementById("slotEnd");
+
+      dayDiv.style.display = type === "byDay" ? "block" : "none";
+      dateDiv.style.display = type === "byDate" ? "block" : "none";
+
+      if (type === "byTime") {
+        startInput.disabled = false; endInput.disabled = false;
+        startInput.value = ""; endInput.value = "";
+      } else {
+        startInput.disabled = false; endInput.disabled = false;
+        startInput.value = "00:00"; endInput.value = "00:00";
       }
     }
 
-    function renderAdmins(){
-      adminTbody.innerHTML = '';
-      settings.rotationAdmins.forEach((adm, i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td><input type="text" value="${adm.name || ''}" data-idx="${i}" data-field="name" style="width:100%"></td>
-          <td><input type="text" value="${adm.link || ''}" data-idx="${i}" data-field="link" style="width:100%"></td>
+    function renderTable() {
+      const tbody = document.getElementById("slotTable");
+      tbody.innerHTML = "";
+      timeSlots.forEach((slot, index) => {
+        const typeLabel = slot.type === "byTime" ? "Jam Harian" : slot.type === "byDay" ? "Hari Sahaja" : "Tarikh Sahaja";
+        const label = slot.type === "byDay" ? slot.day : (slot.type === "byDate" ? slot.date : "-");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${escapeHtml(slot.name)}</td>
+          <td>${typeLabel}</td>
+          <td>${label}</td>
+          <td>${slot.start}</td>
+          <td>${slot.end}</td>
+          <td><a href="${escapeUrl(slot.link)}" target="_blank" rel="noopener">${escapeHtml(slot.link)}</a></td>
+          <td><button class="btn-ghost" onclick="removeSlot(${index})" aria-label="Padam slot ${index+1}">❌</button></td>
         `;
-        adminTbody.appendChild(tr);
-      });
-
-      adminTbody.querySelectorAll('input').forEach(inp=>{
-        inp.addEventListener('input', (e)=>{
-          const idx = parseInt(e.target.dataset.idx,10);
-          const field = e.target.dataset.field;
-          settings.rotationAdmins[idx][field] = e.target.value;
-        });
+        tbody.appendChild(row);
       });
     }
 
-    modeSel.addEventListener('change', ()=>{
-      settings.mode = modeSel.value;
-    });
+    function addSlot() {
+      const name = document.getElementById("slotName").value.trim();
+      const link = document.getElementById("slotLink").value.trim();
+      const start = (document.getElementById("slotStart").value || "").slice(0, 5);
+      const end = (document.getElementById("slotEnd").value || "").slice(0, 5);
+      const type = document.getElementById("slotType").value;
+      const day = type === "byDay" ? document.getElementById("slotDay").value : null;
+      const date = type === "byDate" ? document.getElementById("slotDate").value : null;
 
-    refreshBtn.addEventListener('click', loadSettings);
+      if (!name || !link || !start || !end || (type === "byDay" && !day) || (type === "byDate" && !date)) {
+        alert("Sila isi semua maklumat."); return;
+      }
+      timeSlots.push({ name, link, start, end, type, day, date });
+      saveSlots(); renderTable();
+      document.getElementById("slotName").value = "";
+      document.getElementById("slotLink").value = "";
+    }
 
-    downloadBtn.addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(settings, null, 2)], {type:'application/json'});
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url;
-      a.download = 'settings.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      statusEl.textContent = "✅ settings.json dimuat turun. Sila upload ke GitHub Pages repo anda.";
-    });
+    function removeSlot(index) { timeSlots.splice(index, 1); saveSlots(); renderTable(); }
 
-    loadSettings();
+    function autoRedirect() {
+      if(mode !== "schedule") return;
+
+      const now = new Date();
+      const malaysiaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+      const current = malaysiaTime.toTimeString().slice(0, 5); // HH:MM
+      const today = malaysiaTime.toISOString().split("T")[0]; // yyyy-mm-dd
+      const currentDay = ["Ahad","Isnin","Selasa","Rabu","Khamis","Jumaat","Sabtu"][malaysiaTime.getDay()];
+      const statusEl = document.getElementById("status");
+
+      const match = timeSlots.find(slot => {
+        if (slot.type === "byTime") return current >= slot.start && current <= slot.end;
+        if (slot.type === "byDay")  return slot.day === currentDay && current >= slot.start && current <= slot.end;
+        if (slot.type === "byDate") return slot.date === today && current >= slot.start && current <= slot.end;
+        return false;
+      });
+
+      const isAdminPage = window.location.pathname.includes("admin.html");
+
+      if (match) {
+        statusEl.textContent = `✅ Sekarang (${current}, ${today}) — Redirect ke ${match.name}`;
+        statusEl.classList.remove("error");
+        if (!isAdminPage) setTimeout(() => { window.location.href = match.link; }, 1200);
+      } else {
+        statusEl.textContent = `❌ Tiada admin aktif sekarang (${current}, ${today})`;
+        statusEl.classList.add("error");
+      }
+    }
+
+    // ========================= ROTATE MODE LOGIC =========================
+    function renderRotationTable(){
+      const tbody = document.getElementById("rotationTable");
+      if(!tbody) return;
+      tbody.innerHTML = "";
+      rotationAdmins.forEach((adm, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx+1}</td>
+          <td>${escapeHtml(adm.name || "")}</td>
+          <td><a href="${escapeUrl(adm.link)}" target="_blank" rel="noopener">${escapeHtml(adm.link || "")}</a></td>
+          <td><button class="btn-ghost" onclick="moveRotation(${idx}, -1)" ${idx===0?'disabled':''} title="Naik">⬆️</button></td>
+          <td><button class="btn-ghost" onclick="moveRotation(${idx}, 1)" ${idx===rotationAdmins.length-1?'disabled':''} title="Turun">⬇️</button></td>
+          <td><button class="btn-ghost" onclick="removeRotationAdmin(${idx})" aria-label="Padam admin ${idx+1}">❌</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("rotIndexLabel").textContent = rotationIndex;
+      updateRotateButtonsState();
+    }
+
+    function addRotationAdmin(){
+      const name = document.getElementById("rotName").value.trim();
+      const link = document.getElementById("rotLink").value.trim();
+      if(!name || !link){ alert("Sila isi Nama dan Link Admin."); return; }
+      rotationAdmins.push({ name, link });
+      if(rotationIndex >= rotationAdmins.length) rotationIndex = 0;
+      saveRotation(); renderRotationTable();
+      document.getElementById("rotName").value = ""; document.getElementById("rotLink").value = "";
+    }
+
+    function removeRotationAdmin(idx){
+      rotationAdmins.splice(idx, 1);
+      if(rotationAdmins.length === 0) rotationIndex = 0;
+      else rotationIndex = Math.min(rotationIndex, rotationAdmins.length - 1);
+      saveRotation(); renderRotationTable();
+    }
+
+    function moveRotation(idx, delta){
+      const newIdx = idx + delta;
+      if(newIdx < 0 || newIdx >= rotationAdmins.length) return;
+      const [item] = rotationAdmins.splice(idx, 1);
+      rotationAdmins.splice(newIdx, 0, item);
+      if(rotationIndex === idx) rotationIndex = newIdx;
+      else if(rotationIndex === newIdx) rotationIndex = idx;
+      saveRotation(); renderRotationTable();
+    }
+
+    function updateRotateButtonsState(){
+      const has = rotationAdmins.length > 0;
+      const prevBtn = document.getElementById("prevBtn");
+      const goNextBtn = document.getElementById("goNextBtn");
+      const topNext = document.getElementById("nextBtn");
+      if(prevBtn){ prevBtn.disabled = !has; }
+      if(goNextBtn){ goNextBtn.disabled = !has; }
+      if(topNext){ topNext.disabled = (mode!=="rotate" || !has); }
+      document.getElementById("rotIndexLabel").textContent = rotationIndex;
+    }
+
+    function prevAdmin(){
+      if(rotationAdmins.length === 0) return;
+      rotationIndex = (rotationIndex - 1 + rotationAdmins.length) % rotationAdmins.length;
+      saveRotation(); redirectToCurrentAdmin("⬅️");
+    }
+
+    function nextAdmin(){
+      if(rotationAdmins.length === 0) return;
+      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
+      saveRotation(); redirectToCurrentAdmin("➡️");
+    }
+
+    function redirectToCurrentAdmin(icon){
+      const isAdminPage = window.location.pathname.includes("admin.html");
+      const statusEl = document.getElementById("status");
+      const adm = rotationAdmins[rotationIndex];
+      if(!adm) return;
+      statusEl.classList.remove("error");
+      statusEl.textContent = `${icon} Rotate ke: ${adm.name} (index ${rotationIndex}) — redirect sekarang...`;
+      if(!isAdminPage){ setTimeout(()=> { window.location.href = adm.link; }, 400); }
+    }
+
+    // ============ AUTO-ROTATE on public page ============
+    function autoRotateOnPublicIfNeeded(){
+      const isAdminPage = window.location.pathname.includes("admin.html");
+      if(isAdminPage) return;                 // jangan auto-rotate di admin
+      if(mode !== "rotate") return;           // hanya bila Rotate Mode
+      if(rotationAdmins.length === 0) return; // pastikan ada senarai admin
+      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
+      saveRotation();
+      redirectToCurrentAdmin("🔁");
+    }
+
+    // ========================= HELPERS =========================
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" }[s]
+      ));
+    }
+    function escapeUrl(url){
+      try { return new URL(url).toString(); } catch { return '#'; }
+    }
+
+    // ========================= INIT =========================
+    function boot(){
+      renderTable(); renderRotationTable(); updateModeUI();
+
+      const isAdminPage = window.location.pathname.includes("admin.html");
+
+      // Public page behaviour
+      if(!isAdminPage){
+        if(mode === "rotate"){ autoRotateOnPublicIfNeeded(); return; } // will redirect
+        if(mode === "schedule"){ autoRedirect(); }
+      }
+
+      // Admin / preview loop for schedule
+      setInterval(()=> { if(mode === "schedule") autoRedirect(); }, 30000);
+    }
+    window.onload = boot;
   </script>
 </body>
 </html>
