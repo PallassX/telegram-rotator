@@ -1,0 +1,17 @@
+{
+  "mode": "rotate",
+  "rotationAdmins": [
+    { "name": "hany", "link": "https://t.me/hanyjutsu?text=doneregister" },
+    { "name": "naylie", "link": "https://t.me/nayliejutsu?text=doneregister" },
+    { "name": "sofia", "link": "https://t.me/sofiyagfs?text=doneregister" }
+  ],
+  "timeSlots": [
+    {
+      "name": "Morning Slot",
+      "link": "https://t.me/morningadmin",
+      "type": "byTime",
+      "start": "09:00",
+      "end": "12:00"
+    }
+  ]
+}
