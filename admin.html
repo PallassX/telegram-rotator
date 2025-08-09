@@ -53,166 +53,122 @@
     <div class="muted">Matikan untuk hentikan semua redirect walaupun ada admin aktif.</div>
   </div>
 
-  <div class="wrap">
-    <div class="row-3">
-      <div>
-        <label>Nama Admin:</label>
-        <input type="text" id="rotName" placeholder="Contoh: Admin 1">
-      </div>
-      <div>
-        <label>Link Admin:</label>
-        <input type="text" id="rotLink" placeholder="https://t.me/namatelegram">
-      </div>
-      <div style="display:flex; align-items:end; gap:8px;">
-        <button onclick="addRotationAdmin()">➕ Tambah Admin</button>
-      </div>
-    </div>
+  <!-- … bahagian atas fail kekal sama … -->
 
-    <table aria-label="Senarai admin untuk rotation">
-      <thead><tr><th>#</th><th>Aktif</th><th>Nama</th><th>Link</th><th>Naik</th><th>Turun</th><th>❌</th></tr></thead>
-      <tbody id="rotationTable"></tbody>
-    </table>
-
-    <div class="flex" style="justify-content:space-between; margin-top:8px;">
-      <div class="badge">Index semasa: <span id="rotIndexLabel">0</span></div>
-      <div class="flex">
-        <button class="btn-ghost btn-inline" onclick="prevAdmin()" id="prevBtn" disabled>⬅️ Prev</button>
-        <button class="btn-inline" onclick="nextAdmin()" id="goNextBtn" disabled>Next Admin ➡️</button>
-      </div>
+<div class="wrap">
+  <div class="row-3">
+    <div>
+      <label>Nama Admin:</label>
+      <input type="text" id="rotName" placeholder="Contoh: Admin 1">
     </div>
-    <p class="helper">Nota: Senarai & status disimpan di <em>localStorage</em>. Halaman public (index.html) guna <em>settings.json</em> — kemas kini fail itu untuk effect global.</p>
+    <div>
+      <label>Link Admin:</label>
+      <input type="text" id="rotLink" placeholder="https://t.me/namatelegram">
+    </div>
+    <div style="display:flex; align-items:end; gap:8px;">
+      <button onclick="addRotationAdmin()">➕ Tambah Admin</button>
+    </div>
   </div>
 
-  <script>
-    // ====== STATE ======
-    let rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]")
-      .map(a => ({ ...a, enabled: (a.enabled !== false) })); // default enabled = true
-    let rotationIndex  = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
-    let rotateEnabled  = JSON.parse(localStorage.getItem("rotateEnabled") || "true"); // master toggle
+  <table aria-label="Senarai admin untuk rotation">
+    <thead><tr><th>#</th><th>Aktif</th><th>Nama</th><th>Link</th><th>Naik</th><th>Turun</th><th>❌</th></tr></thead>
+    <tbody id="rotationTable"></tbody>
+  </table>
 
-    function saveRotation(){
-      localStorage.setItem("rotationAdmins", JSON.stringify(rotationAdmins));
-      localStorage.setItem("rotationIndex", String(rotationIndex));
-      localStorage.setItem("rotateEnabled", JSON.stringify(rotateEnabled));
-    }
+  <div class="badge" style="margin-top:8px;">Index semasa: <span id="rotIndexLabel">0</span></div>
+  <p class="helper">Nota: Senarai & status disimpan di <em>localStorage</em>. Halaman public (index.html) guna <em>settings.json</em> — kemas kini fail itu untuk effect global.</p>
+</div>
 
-    // ====== RENDER TABLE ======
-    function renderRotationTable(){
-      const tbody = document.getElementById("rotationTable");
-      tbody.innerHTML = "";
-      rotationAdmins.forEach((adm, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${idx+1}</td>
-          <td>
-            <label class="switch">
-              <input type="checkbox" ${adm.enabled ? "checked":""} onchange="toggleAdminEnabled(${idx}, this.checked)">
-              <span class="slider"></span>
-            </label>
-          </td>
-          <td>${escapeHtml(adm.name || "")}</td>
-          <td><a href="${escapeUrl(adm.link)}" target="_blank" rel="noopener">${escapeHtml(adm.link || "")}</a></td>
-          <td><button class="btn-ghost" onclick="moveRotation(${idx}, -1)" ${idx===0?'disabled':''} title="Naik">⬆️</button></td>
-          <td><button class="btn-ghost" onclick="moveRotation(${idx}, 1)" ${idx===rotationAdmins.length-1?'disabled':''} title="Turun">⬇️</button></td>
-          <td><button class="btn-ghost" onclick="removeRotationAdmin(${idx})" aria-label="Padam admin ${idx+1}">❌</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-      updateRotateButtonsState();
-    }
+<script>
+  // ====== STATE ======
+  let rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]")
+    .map(a => ({ ...a, enabled: (a.enabled !== false) })); // default enabled = true
+  let rotationIndex  = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
+  let rotateEnabled  = JSON.parse(localStorage.getItem("rotateEnabled") || "true"); // master toggle
 
-    function toggleAdminEnabled(idx, isOn){
-      rotationAdmins[idx].enabled = !!isOn;
-      saveRotation(); renderRotationTable();
-    }
+  function saveRotation(){
+    localStorage.setItem("rotationAdmins", JSON.stringify(rotationAdmins));
+    localStorage.setItem("rotationIndex", String(rotationIndex));
+    localStorage.setItem("rotateEnabled", JSON.stringify(rotateEnabled));
+  }
 
-    function addRotationAdmin(){
-      const name = document.getElementById("rotName").value.trim();
-      const link = document.getElementById("rotLink").value.trim();
-      if(!name || !link){ alert("Sila isi Nama dan Link Admin."); return; }
-      rotationAdmins.push({ name, link, enabled:true });
-      if(rotationIndex >= rotationAdmins.length) rotationIndex = 0;
-      saveRotation(); renderRotationTable();
-      document.getElementById("rotName").value = ""; document.getElementById("rotLink").value = "";
-    }
+  // ====== RENDER TABLE ======
+  function renderRotationTable(){
+    const tbody = document.getElementById("rotationTable");
+    tbody.innerHTML = "";
+    rotationAdmins.forEach((adm, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx+1}</td>
+        <td>
+          <label class="switch">
+            <input type="checkbox" ${adm.enabled ? "checked":""} onchange="toggleAdminEnabled(${idx}, this.checked)">
+            <span class="slider"></span>
+          </label>
+        </td>
+        <td>${escapeHtml(adm.name || "")}</td>
+        <td><a href="${escapeUrl(adm.link)}" target="_blank" rel="noopener">${escapeHtml(adm.link || "")}</a></td>
+        <td><button class="btn-ghost" onclick="moveRotation(${idx}, -1)" ${idx===0?'disabled':''} title="Naik">⬆️</button></td>
+        <td><button class="btn-ghost" onclick="moveRotation(${idx}, 1)" ${idx===rotationAdmins.length-1?'disabled':''} title="Turun">⬇️</button></td>
+        <td><button class="btn-ghost" onclick="removeRotationAdmin(${idx})" aria-label="Padam admin ${idx+1}">❌</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById("rotIndexLabel").textContent = rotationIndex;
+  }
 
-    function removeRotationAdmin(idx){
-      rotationAdmins.splice(idx, 1);
-      if(rotationAdmins.length === 0) rotationIndex = 0;
-      else rotationIndex = Math.min(rotationIndex, rotationAdmins.length - 1);
-      saveRotation(); renderRotationTable();
-    }
+  function toggleAdminEnabled(idx, isOn){
+    rotationAdmins[idx].enabled = !!isOn;
+    saveRotation(); renderRotationTable();
+  }
 
-    function moveRotation(idx, delta){
-      const newIdx = idx + delta;
-      if(newIdx < 0 || newIdx >= rotationAdmins.length) return;
-      const [item] = rotationAdmins.splice(idx, 1);
-      rotationAdmins.splice(newIdx, 0, item);
-      if(rotationIndex === idx) rotationIndex = newIdx;
-      else if(rotationIndex === newIdx) rotationIndex = idx;
-      saveRotation(); renderRotationTable();
-    }
+  function addRotationAdmin(){
+    const name = document.getElementById("rotName").value.trim();
+    const link = document.getElementById("rotLink").value.trim();
+    if(!name || !link){ alert("Sila isi Nama dan Link Admin."); return; }
+    rotationAdmins.push({ name, link, enabled:true });
+    if(rotationIndex >= rotationAdmins.length) rotationIndex = 0;
+    saveRotation(); renderRotationTable();
+    document.getElementById("rotName").value = ""; document.getElementById("rotLink").value = "";
+  }
 
-    function updateRotateButtonsState(){
-      const has = rotationAdmins.length > 0;
-      document.getElementById("prevBtn").disabled = !has;
-      document.getElementById("goNextBtn").disabled = !has;
-      document.getElementById("rotIndexLabel").textContent = rotationIndex;
-    }
+  function removeRotationAdmin(idx){
+    rotationAdmins.splice(idx, 1);
+    if(rotationAdmins.length === 0) rotationIndex = 0;
+    else rotationIndex = Math.min(rotationIndex, rotationAdmins.length - 1);
+    saveRotation(); renderRotationTable();
+  }
 
-    function prevAdmin(){
-      if(rotationAdmins.length === 0) return;
-      rotationIndex = (rotationIndex - 1 + rotationAdmins.length) % rotationAdmins.length;
-      saveRotation(); redirectToCurrentAdmin("⬅️");
-    }
-    function nextAdmin(){
-      if(rotationAdmins.length === 0) return;
-      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
-      saveRotation(); redirectToCurrentAdmin("➡️");
-    }
+  function moveRotation(idx, delta){
+    const newIdx = idx + delta;
+    if(newIdx < 0 || newIdx >= rotationAdmins.length) return;
+    const [item] = rotationAdmins.splice(idx, 1);
+    rotationAdmins.splice(newIdx, 0, item);
+    if(rotationIndex === idx) rotationIndex = newIdx;
+    else if(rotationIndex === newIdx) rotationIndex = idx;
+    saveRotation(); renderRotationTable();
+  }
 
-    function redirectToCurrentAdmin(icon){
-      const isAdminPage = window.location.pathname.includes("admin.html");
-      const statusEl = document.getElementById("status");
-      const activeAdmins = rotationAdmins.filter(a => a.enabled);
-      if(!rotateEnabled){
-        statusEl.textContent = "⛔ Rotate dimatikan (Global OFF).";
-        return;
-      }
-      if(activeAdmins.length === 0){
-        statusEl.textContent = "❌ Tiada admin aktif (semua OFF).";
-        return;
-      }
-      const adm = activeAdmins[rotationIndex % activeAdmins.length];
-      statusEl.textContent = `${icon} Rotate ke: ${adm.name} (index ${rotationIndex}). Redirect hanya di halaman public.`;
-      if(!isAdminPage){ setTimeout(()=> { window.location.href = adm.link; }, 400); }
-    }
+  // ====== HELPERS ======
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => (
+      { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" }[s]
+    ));
+  }
+  function escapeUrl(url){
+    try { return new URL(url).toString(); } catch { return '#'; }
+  }
 
-    // ====== HELPERS ======
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, s => (
-        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" }[s]
-      ));
-    }
-    function escapeUrl(url){
-      try { return new URL(url).toString(); } catch { return '#'; }
-    }
-
-    // ====== INIT ======
-    function boot(){
-      // Master toggle UI
-      const master = document.getElementById("masterToggle");
-      master.checked = !!rotateEnabled;
-      master.addEventListener("change", (e)=> {
-        rotateEnabled = !!e.target.checked;
-        saveRotation();
-        const st = document.getElementById("status");
-        st.textContent = rotateEnabled ? "✅ Rotate Mode diaktifkan." : "⛔ Rotate Mode dimatikan.";
-      });
-
-      renderRotationTable();
-    }
-    window.onload = boot;
-  </script>
-</body>
-</html>
+  // ====== INIT ======
+  function boot(){
+    document.getElementById("masterToggle").checked = !!rotateEnabled;
+    document.getElementById("masterToggle").addEventListener("change", (e)=> {
+      rotateEnabled = !!e.target.checked;
+      saveRotation();
+      const st = document.getElementById("status");
+      st.textContent = rotateEnabled ? "✅ Rotate Mode diaktifkan." : "⛔ Rotate Mode dimatikan.";
+    });
+    renderRotationTable();
+  }
+  window.onload = boot;
+</script>
