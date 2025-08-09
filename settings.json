@@ -1,7 +1,8 @@
 {
+  "rotateEnabled": true,
   "rotationAdmins": [
-    { "name": "hany",   "link": "https://t.me/hanyjutsu?text=doneregister" },
-    { "name": "naylie", "link": "https://t.me/nayliejutsu?text=doneregister" },
-    { "name": "sofia",  "link": "https://t.me/sofiyagfs?text=doneregister" }
+    { "name": "hany",   "link": "https://t.me/hanyjutsu?text=doneregister",   "enabled": true },
+    { "name": "naylie", "link": "https://t.me/nayliejutsu?text=doneregister", "enabled": true },
+    { "name": "sofia",  "link": "https://t.me/sofiyagfs?text=doneregister",   "enabled": true }
   ]
 }
