@@ -11,6 +11,7 @@
     .error { color:#b00020; }
     .muted { color:#666; font-size:14px; margin-top:6px; }
     .badge { display:inline-block; margin-top:10px; padding:6px 10px; border-radius:999px; background:#fff; border:1px solid #ddd; }
+    a.btn { display:inline-block; padding:8px 12px; border-radius:10px; border:1px solid #ddd; margin-top:10px; text-decoration:none; }
   </style>
 </head>
 <body>
@@ -22,43 +23,68 @@
   <script>
     const statusEl  = document.getElementById("status");
 
-    async function loadSettings() {
-      try {
-        const res = await fetch('settings.json?_=' + Date.now());
-        if (!res.ok) throw new Error("Gagal memuatkan settings.json");
-        return await res.json();
-      } catch (err) {
-        console.warn("Gagal load settings.json, fallback localStorage.", err);
-        try {
-          const rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
-          const rotateEnabled  = JSON.parse(localStorage.getItem("rotateEnabled") || "true");
-          return { rotationAdmins, rotateEnabled };
-        } catch { return null; }
-      }
+    // Helper: read localStorage safely
+    function readLS(key, fallback) {
+      try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); }
+      catch { return fallback; }
     }
 
-    function autoRotate(rotationAdmins, rotateEnabled) {
+    async function loadSettings() {
+      // 1) Load settings.json
+      let fileSettings = {};
+      try {
+        const res = await fetch('settings.json?_=' + Date.now());
+        if (res.ok) fileSettings = await res.json();
+      } catch (err) {
+        console.warn('Gagal load settings.json, teruskan dengan localStorage sahaja.', err);
+      }
+
+      // 2) Read localStorage state from admin.html
+      const lsAdmins = readLS("rotationAdmins", null);
+      const lsEnabled = readLS("rotateEnabled", null);
+      const lsIndexRaw = localStorage.getItem("rotationIndex");
+      const lsIndex = lsIndexRaw ? parseInt(lsIndexRaw, 10) : null;
+
+      // 3) Merge — localStorage overrides file if present
+      const rotationAdmins = (Array.isArray(lsAdmins) ? lsAdmins : fileSettings.rotationAdmins || [])
+        .map(a => ({ ...a, enabled: (a && a.enabled !== false) })); // default true
+
+      const rotateEnabled = (lsEnabled !== null) ? !!lsEnabled
+                           : (fileSettings.rotateEnabled !== false);
+
+      return { rotationAdmins, rotateEnabled, rotationIndex: (Number.isInteger(lsIndex) ? lsIndex : 0) };
+    }
+
+    function autoRotate({ rotationAdmins, rotateEnabled, rotationIndex }) {
+      // Debug guard: add ?debug=1 to disable redirect for testing
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('debug') === '1') {
+        statusEl.textContent = "🧪 Debug mode: tiada redirect.";
+        return;
+      }
+
       // Global OFF?
-      if (rotateEnabled === false) {
+      if (!rotateEnabled) {
         statusEl.classList.add("error");
         statusEl.textContent = "⛔ Rotate dimatikan oleh admin (Global OFF).";
         return;
       }
 
-      const active = (rotationAdmins || []).filter(a => a && (a.enabled !== false));
+      // Filter only enabled admins
+      const active = (rotationAdmins || []).filter(a => a && (a.enabled !== false) && a.link);
       if (active.length === 0) {
         statusEl.classList.add("error");
         statusEl.textContent = "❌ Tiada admin aktif untuk rotate.";
         return;
       }
 
-      let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
+      // Increment & persist index
       rotationIndex = (rotationIndex + 1) % active.length;
-      localStorage.setItem("rotationIndex", rotationIndex);
+      localStorage.setItem("rotationIndex", String(rotationIndex));
 
       const adm = active[rotationIndex];
       statusEl.classList.remove("error");
-      statusEl.textContent = `🔁 Rotate ke: ${adm.name} (index ${rotationIndex}) — redirect sekarang...`;
+      statusEl.textContent = `🔁 Rotate ke: ${adm.name || 'admin'} (index ${rotationIndex}) — redirect sekarang...`;
       setTimeout(() => { window.location.href = adm.link; }, 400);
     }
 
@@ -69,7 +95,7 @@
         statusEl.textContent = "❌ Tidak dapat memuatkan tetapan.";
         return;
       }
-      autoRotate(settings.rotationAdmins || [], settings.rotateEnabled !== false);
+      autoRotate(settings);
     })();
   </script>
 </body>
