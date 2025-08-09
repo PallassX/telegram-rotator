@@ -2,65 +2,89 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8" />
-  <title>Redirect Telegram | Slot Masa</title>
+  <title>Redirect Telegram | Auto Rotate / Slot Masa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
-      text-align: center;
-    }
-    h2 {
-      margin-top: 50px;
-    }
-    .status {
-      font-size: 20px;
-      color: green;
-      margin-top: 30px;
-    }
+    body { font-family: Arial, sans-serif; background:#f4f4f4; padding:24px; max-width:720px; margin:auto; text-align:center; }
+    h2 { margin-top:56px; }
+    .status { font-size:18px; margin-top:18px; color: #0a7c2f; }
+    .error { color:#b00020; }
+    .muted { color:#666; font-size:14px; margin-top:6px; }
+    .badge { display:inline-block; margin-top:10px; padding:6px 10px; border-radius:999px; background:#fff; border:1px solid #ddd; }
   </style>
 </head>
 <body>
-
   <h2>🔁 Sedang Semak Redirect...</h2>
-  <p class="status" id="status">⏳ Memeriksa masa slot admin aktif...</p>
+  <div class="badge">Mode: <strong id="modeLabel">-</strong></div>
+  <p class="status" id="status">⏳ Memeriksa tetapan...</p>
+  <p class="muted">Halaman ini auto‑redirect. Tiada tindakan diperlukan.</p>
 
   <script>
+    // ====== Ambil data dari localStorage (diset dalam admin) ======
+    const mode = localStorage.getItem("mode") || "schedule";              // 'schedule' atau 'rotate'
     const timeSlots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
+    const rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]");
+    let rotationIndex = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
 
-    function autoRedirect() {
+    // UI kecil
+    const modeLabel = document.getElementById("modeLabel");
+    const statusEl  = document.getElementById("status");
+    modeLabel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+
+    function saveRotationIndex() {
+      localStorage.setItem("rotationIndex", String(rotationIndex));
+    }
+
+    // ====== AUTO-ROTATE (Mode: Rotate) ======
+    function autoRotateIfNeeded() {
+      if (mode !== "rotate") return false;                 // bukan rotate
+      if (!Array.isArray(rotationAdmins) || rotationAdmins.length === 0) return false;
+
+      // gerakkan index ke admin seterusnya dan simpan
+      rotationIndex = (rotationIndex + 1) % rotationAdmins.length;
+      saveRotationIndex();
+
+      const adm = rotationAdmins[rotationIndex];
+      if (!adm || !adm.link) return false;
+
+      statusEl.classList.remove("error");
+      statusEl.textContent = `🔁 Rotate ke: ${adm.name || "Admin"} (index ${rotationIndex}) — redirect sekarang...`;
+      setTimeout(() => { window.location.href = adm.link; }, 400);
+      return true;
+    }
+
+    // ====== AUTO-SCHEDULE (Mode: Schedule) ======
+    function autoRedirectBySchedule() {
       const now = new Date();
       const malaysiaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
       const current = malaysiaTime.toTimeString().slice(0, 5); // HH:MM
-      const today = malaysiaTime.toISOString().split("T")[0]; // yyyy-mm-dd
-      const currentDay = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"][malaysiaTime.getDay()];
-      const statusEl = document.getElementById("status");
+      const today = malaysiaTime.toISOString().split("T")[0];  // yyyy-mm-dd
+      const currentDay = ["Ahad","Isnin","Selasa","Rabu","Khamis","Jumaat","Sabtu"][malaysiaTime.getDay()];
 
       const match = timeSlots.find(slot => {
-        if (slot.type === "byTime") {
-          return current >= slot.start && current <= slot.end;
-        } else if (slot.type === "byDay") {
-          return slot.day === currentDay && current >= slot.start && current <= slot.end;
-        } else if (slot.type === "byDate") {
-          return slot.date === today && current >= slot.start && current <= slot.end;
-        }
+        if (!slot) return false;
+        if (slot.type === "byTime")  return current >= slot.start && current <= slot.end;
+        if (slot.type === "byDay")   return slot.day === currentDay && current >= slot.start && current <= slot.end;
+        if (slot.type === "byDate")  return slot.date === today && current >= slot.start && current <= slot.end;
         return false;
       });
 
       if (match) {
-        statusEl.innerText = `✅ Redirect ke ${match.name} (${current}, ${today})`;
-        setTimeout(() => {
-          window.location.href = match.link;
-        }, 2000);
+        statusEl.classList.remove("error");
+        statusEl.textContent = `✅ Redirect ke ${match.name} (${current}, ${today})`;
+        setTimeout(() => { window.location.href = match.link; }, 1000);
       } else {
-        statusEl.innerText = `❌ Tiada admin aktif sekarang (${current}, ${today})`;
+        statusEl.classList.add("error");
+        statusEl.textContent = `❌ Tiada admin aktif sekarang (${current}, ${today})`;
       }
     }
 
-    window.onload = autoRedirect;
+    // ====== BOOT ======
+    (function boot(){
+      // Cuba rotate dahulu jika mode=rotate; jika tidak, guna schedule.
+      const rotated = autoRotateIfNeeded();
+      if (!rotated) autoRedirectBySchedule();
+    })();
   </script>
 </body>
 </html>
