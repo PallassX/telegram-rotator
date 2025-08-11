@@ -1,94 +1,113 @@
 # Telegram Rotator Jutsu
 
-A Telegram admin rotation system with a web-based admin panel for managing rotation settings.
+A Telegram admin rotation system with an admin panel for managing rotation settings.
 
 ## Features
 
-- **Admin Panel**: Web-based interface to manage rotation admins
-- **Real-time Updates**: Changes are immediately saved to `settings.json`
-- **Global Toggle**: Master switch to enable/disable all rotations
-- **Admin Management**: Add, remove, reorder, and toggle individual admins
-- **Public Page**: `index.html` uses the same `settings.json` for global effects
+- Admin panel for managing rotation settings
+- JSON-based configuration
+- Express.js backend server
+- Static file serving
 
-## Setup
+## Local Development
 
-### Prerequisites
-- Node.js installed on your system
-- npm (comes with Node.js)
-
-### Installation
-
-1. **Install dependencies:**
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Start the server:**
+2. Start the development server:
    ```bash
    npm start
    ```
 
-3. **Access the admin panel:**
-   - Open your browser and go to: `http://localhost:3000/admin.html`
-   - The public page is available at: `http://localhost:3000/index.html`
+3. Access the application:
+   - Main page: http://localhost:3000/index.html
+   - Admin panel: http://localhost:3000/admin.html
 
-## How It Works
+## Deployment
 
-### Admin Panel (`admin.html`)
-- **Loads data** from `settings.json` when the page loads
-- **Saves changes** directly to `settings.json` via the server
-- **Real-time updates** - all changes are immediately persisted
-- **Global toggle** controls whether rotation is enabled system-wide
+### GitHub Pages (Static Frontend)
 
-### Server (`server.js`)
-- Serves the static HTML files
-- Handles API requests to read/write `settings.json`
-- Validates data before saving
-- Provides proper error handling
+This repository is configured with GitHub Actions to automatically deploy to GitHub Pages.
 
-### Settings File (`settings.json`)
-- Contains the master rotation toggle
-- Stores the list of admin users with their status
-- Used by both the admin panel and public page
+1. **Enable GitHub Pages:**
+   - Go to your repository on GitHub
+   - Navigate to Settings → Pages
+   - Set Source to "Deploy from a branch"
+   - Select "gh-pages" branch
+   - Click Save
+
+2. **Automatic Deployment:**
+   - Every push to the `main` branch triggers automatic deployment
+   - The static files will be available at: `https://yourusername.github.io/telegram-rotator-jutsu/`
+
+### Server Deployment
+
+For full functionality including the backend API, deploy to a Node.js hosting service:
+
+#### Option 1: Railway
+1. Connect your GitHub repository to Railway
+2. Railway will automatically detect the Node.js app
+3. Set environment variables if needed
+4. Deploy with one click
+
+#### Option 2: Render
+1. Connect your GitHub repository to Render
+2. Choose "Web Service"
+3. Set build command: `npm install`
+4. Set start command: `npm start`
+5. Deploy
+
+#### Option 3: Heroku
+1. Install Heroku CLI
+2. Create a new Heroku app
+3. Push to Heroku: `git push heroku main`
+4. Scale the dyno: `heroku ps:scale web=1`
+
+#### Option 4: VPS/Dedicated Server
+1. Clone the repository
+2. Install Node.js and npm
+3. Run `npm install`
+4. Use PM2 for process management:
+   ```bash
+   npm install -g pm2
+   pm2 start server.js --name "telegram-rotator"
+   pm2 startup
+   pm2 save
+   ```
+
+## Environment Variables
+
+For production deployment, consider setting these environment variables:
+
+- `PORT`: Server port (default: 3000)
+- `NODE_ENV`: Environment (production/development)
 
 ## File Structure
 
 ```
-telegram-rotator-jutsu/
-├── admin.html          # Admin panel interface
-├── index.html          # Public rotation page
-├── settings.json       # Configuration file
-├── server.js           # Node.js server
-├── package.json        # Dependencies
-└── README.md          # This file
+├── server.js          # Express.js server
+├── admin.html         # Admin panel interface
+├── index.html         # Main application page
+├── settings.json      # Configuration file
+├── package.json       # Dependencies and scripts
+└── .github/workflows/ # GitHub Actions deployment
 ```
 
-## Usage
+## API Endpoints
 
-### Adding an Admin
-1. Enter the admin name in "Nama Admin"
-2. Enter the Telegram link in "Link Admin"
-3. Click "➕ Tambah Admin"
+- `GET /api/settings` - Retrieve current settings
+- `POST /settings.json` - Update settings
+- `GET /settings.json` - Get settings file
 
-### Managing Admins
-- **Toggle Status**: Use the green switch to enable/disable individual admins
-- **Reorder**: Use ⬆️ and ⬇️ buttons to change the rotation order
-- **Delete**: Use ❌ button to remove admins
+## Contributing
 
-### Global Control
-- Use the "Global Rotate" toggle to enable/disable all rotations
-- When disabled, no redirects will occur even if individual admins are active
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-## Troubleshooting
+## License
 
-- **"Error loading settings"**: Make sure the server is running (`npm start`)
-- **"Error saving settings"**: Check that the server has write permissions to `settings.json`
-- **Page not loading**: Ensure you're accessing via `http://localhost:3000` not file://
-
-## Security Note
-
-This system is designed for local/development use. For production deployment, consider:
-- Adding authentication to the admin panel
-- Implementing rate limiting
-- Using HTTPS
-- Restricting file write permissions
+MIT License
