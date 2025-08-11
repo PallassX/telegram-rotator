@@ -1,0 +1,16 @@
+{
+  "name": "telegram-rotator-jutsu",
+  "version": "1.0.0",
+  "description": "Telegram admin rotation system with admin panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": ["telegram", "rotation", "admin", "panel"],
+  "author": "",
+  "license": "MIT"
+}

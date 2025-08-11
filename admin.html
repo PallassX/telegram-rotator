@@ -35,6 +35,9 @@
     input:checked + .slider { background:#0a7c2f; }
     input:checked + .slider:before { transform: translateX(22px); }
     .muted { color:#666; font-size:13px; }
+    .loading { opacity: 0.6; pointer-events: none; }
+    .success { color: #0a7c2f; }
+    .error { color: #dc3545; }
   </style>
 </head>
 <body>
@@ -53,49 +56,103 @@
     <div class="muted">Matikan untuk hentikan semua redirect walaupun ada admin aktif.</div>
   </div>
 
-  <!-- … bahagian atas fail kekal sama … -->
+  <div class="wrap">
+    <div class="row-3">
+      <div>
+        <label>Nama Admin:</label>
+        <input type="text" id="rotName" placeholder="Contoh: Admin 1">
+      </div>
+      <div>
+        <label>Link Admin:</label>
+        <input type="text" id="rotLink" placeholder="https://t.me/namatelegram">
+      </div>
+      <div style="display:flex; align-items:end; gap:8px;">
+        <button onclick="addRotationAdmin()" id="addBtn">➕ Tambah Admin</button>
+      </div>
+    </div>
 
-<div class="wrap">
-  <div class="row-3">
-    <div>
-      <label>Nama Admin:</label>
-      <input type="text" id="rotName" placeholder="Contoh: Admin 1">
-    </div>
-    <div>
-      <label>Link Admin:</label>
-      <input type="text" id="rotLink" placeholder="https://t.me/namatelegram">
-    </div>
-    <div style="display:flex; align-items:end; gap:8px;">
-      <button onclick="addRotationAdmin()">➕ Tambah Admin</button>
-    </div>
+    <table aria-label="Senarai admin untuk rotation">
+      <thead><tr><th>#</th><th>Aktif</th><th>Nama</th><th>Link</th><th>Naik</th><th>Turun</th><th>❌</th></tr></thead>
+      <tbody id="rotationTable"></tbody>
+    </table>
+
+    <div class="badge" style="margin-top:8px;">Index semasa: <span id="rotIndexLabel">0</span></div>
+    <p class="helper">Nota: Senarai & status disimpan di <em>settings.json</em>. Halaman public (index.html) guna fail yang sama untuk effect global.</p>
   </div>
-
-  <table aria-label="Senarai admin untuk rotation">
-    <thead><tr><th>#</th><th>Aktif</th><th>Nama</th><th>Link</th><th>Naik</th><th>Turun</th><th>❌</th></tr></thead>
-    <tbody id="rotationTable"></tbody>
-  </table>
-
-  <div class="badge" style="margin-top:8px;">Index semasa: <span id="rotIndexLabel">0</span></div>
-  <p class="helper">Nota: Senarai & status disimpan di <em>localStorage</em>. Halaman public (index.html) guna <em>settings.json</em> — kemas kini fail itu untuk effect global.</p>
-</div>
 
 <script>
   // ====== STATE ======
-  let rotationAdmins = JSON.parse(localStorage.getItem("rotationAdmins") || "[]")
-    .map(a => ({ ...a, enabled: (a.enabled !== false) })); // default enabled = true
-  let rotationIndex  = parseInt(localStorage.getItem("rotationIndex") || "0", 10);
-  let rotateEnabled  = JSON.parse(localStorage.getItem("rotateEnabled") || "true"); // master toggle
+  let rotationAdmins = [];
+  let rotateEnabled = true;
+  let isLoading = false;
 
-  function saveRotation(){
-    localStorage.setItem("rotationAdmins", JSON.stringify(rotationAdmins));
-    localStorage.setItem("rotationIndex", String(rotationIndex));
-    localStorage.setItem("rotateEnabled", JSON.stringify(rotateEnabled));
+  // ====== FILE OPERATIONS ======
+  async function loadSettings() {
+    try {
+      const response = await fetch('/api/settings');
+      if (!response.ok) throw new Error('Failed to load settings');
+      
+      const settings = await response.json();
+      rotationAdmins = settings.rotationAdmins || [];
+      rotateEnabled = settings.rotateEnabled !== false;
+      
+      // Ensure all admins have enabled property
+      rotationAdmins = rotationAdmins.map(a => ({ ...a, enabled: (a.enabled !== false) }));
+      
+      renderRotationTable();
+      document.getElementById("masterToggle").checked = !!rotateEnabled;
+      updateStatus();
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      alert('Error loading settings. Please check if the server is running.');
+    }
+  }
+
+  async function saveSettings() {
+    if (isLoading) return;
+    
+    isLoading = true;
+    document.body.classList.add('loading');
+    
+    try {
+      const settings = {
+        rotateEnabled: rotateEnabled,
+        rotationAdmins: rotationAdmins
+      };
+
+      const response = await fetch('settings.json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings, null, 2)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      showMessage('Settings saved successfully!', 'success');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      showMessage('Error saving settings. You may need to manually update settings.json', 'error');
+    } finally {
+      isLoading = false;
+      document.body.classList.remove('loading');
+    }
   }
 
   // ====== RENDER TABLE ======
   function renderRotationTable(){
     const tbody = document.getElementById("rotationTable");
     tbody.innerHTML = "";
+    
+    if (rotationAdmins.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#666; padding:20px;">Tiada admin ditambah lagi</td></tr>';
+      document.getElementById("rotIndexLabel").textContent = "0";
+      return;
+    }
+
     rotationAdmins.forEach((adm, idx) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -114,39 +171,49 @@
       `;
       tbody.appendChild(tr);
     });
-    document.getElementById("rotIndexLabel").textContent = rotationIndex;
+    document.getElementById("rotIndexLabel").textContent = "0";
   }
 
   function toggleAdminEnabled(idx, isOn){
     rotationAdmins[idx].enabled = !!isOn;
-    saveRotation(); renderRotationTable();
+    saveSettings();
   }
 
-  function addRotationAdmin(){
+  async function addRotationAdmin(){
     const name = document.getElementById("rotName").value.trim();
     const link = document.getElementById("rotLink").value.trim();
-    if(!name || !link){ alert("Sila isi Nama dan Link Admin."); return; }
-    rotationAdmins.push({ name, link, enabled:true });
-    if(rotationIndex >= rotationAdmins.length) rotationIndex = 0;
-    saveRotation(); renderRotationTable();
-    document.getElementById("rotName").value = ""; document.getElementById("rotLink").value = "";
+    
+    if(!name || !link){ 
+      alert("Sila isi Nama dan Link Admin."); 
+      return; 
+    }
+    
+    rotationAdmins.push({ name, link, enabled: true });
+    await saveSettings();
+    renderRotationTable();
+    
+    // Clear inputs
+    document.getElementById("rotName").value = ""; 
+    document.getElementById("rotLink").value = "";
   }
 
-  function removeRotationAdmin(idx){
-    rotationAdmins.splice(idx, 1);
-    if(rotationAdmins.length === 0) rotationIndex = 0;
-    else rotationIndex = Math.min(rotationIndex, rotationAdmins.length - 1);
-    saveRotation(); renderRotationTable();
+  async function removeRotationAdmin(idx){
+    if (confirm(`Adakah anda pasti mahu padam admin "${rotationAdmins[idx].name}"?`)) {
+      rotationAdmins.splice(idx, 1);
+      await saveSettings();
+      renderRotationTable();
+    }
   }
 
-  function moveRotation(idx, delta){
+  async function moveRotation(idx, delta){
     const newIdx = idx + delta;
     if(newIdx < 0 || newIdx >= rotationAdmins.length) return;
+    
     const [item] = rotationAdmins.splice(idx, 1);
     rotationAdmins.splice(newIdx, 0, item);
-    if(rotationIndex === idx) rotationIndex = newIdx;
-    else if(rotationIndex === newIdx) rotationIndex = idx;
-    saveRotation(); renderRotationTable();
+    
+    await saveSettings();
+    renderRotationTable();
   }
 
   // ====== HELPERS ======
@@ -155,20 +222,45 @@
       { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" }[s]
     ));
   }
+  
   function escapeUrl(url){
     try { return new URL(url).toString(); } catch { return '#'; }
   }
 
+  function showMessage(message, type = 'success') {
+    const status = document.getElementById("status");
+    status.textContent = message;
+    status.className = `status ${type}`;
+    
+    setTimeout(() => {
+      updateStatus();
+    }, 3000);
+  }
+
+  function updateStatus() {
+    const status = document.getElementById("status");
+    if (rotateEnabled) {
+      status.textContent = "✅ Rotate Mode diaktifkan.";
+      status.className = "status";
+    } else {
+      status.textContent = "⛔ Rotate Mode dimatikan.";
+      status.className = "status";
+    }
+  }
+
   // ====== INIT ======
   function boot(){
-    document.getElementById("masterToggle").checked = !!rotateEnabled;
-    document.getElementById("masterToggle").addEventListener("change", (e)=> {
+    document.getElementById("masterToggle").addEventListener("change", async (e)=> {
       rotateEnabled = !!e.target.checked;
-      saveRotation();
-      const st = document.getElementById("status");
-      st.textContent = rotateEnabled ? "✅ Rotate Mode diaktifkan." : "⛔ Rotate Mode dimatikan.";
+      await saveSettings();
+      updateStatus();
     });
-    renderRotationTable();
+    
+    // Load initial settings
+    loadSettings();
   }
+  
   window.onload = boot;
 </script>
+</body>
+</html>
